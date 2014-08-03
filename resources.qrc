@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>translations/Deezer-Plugin_en.qm</file>
+        <file>translations/Deezer-Plugin_fr.qm</file>
+        <file alias="logo">deezer-logo.png</file>
+    </qresource>
+</RCC>
