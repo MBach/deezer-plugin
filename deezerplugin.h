@@ -8,6 +8,7 @@
 #include <QObject>
 #include <QNetworkAccessManager>
 
+
 #include "ui_config.h"
 
 class QWebView;
@@ -28,12 +29,12 @@ private:
 	Ui::DeezerPluginConfigPage _config;
 
 	QWeakPointer<MediaPlayer> _mediaPlayer;
-	
-	QNetworkAccessManager *_networkAccessManager;
+
+	//NetworkAccessManager *_networkAccessManager;
 	QList<QWebView*> _pages;
-	
+
 protected:
-    bool eventFilter(QObject *obj, QEvent *event);
+	bool eventFilter(QObject *obj, QEvent *event);
 
 public:
 	explicit DeezerPlugin();
@@ -41,6 +42,8 @@ public:
 	virtual ~DeezerPlugin();
 
 	virtual QWidget* configPage();
+
+	virtual void init();
 
 	inline virtual bool isConfigurable() const { return true; }
 
@@ -51,10 +54,12 @@ public:
 	virtual void setMediaPlayer(QWeakPointer<MediaPlayer> mediaPlayer);
 
 	inline virtual QString version() const { return "0.1"; }
-	
+
 private slots:
+	void replyFinished(QNetworkReply *);
+
 	void saveCredentials(bool enabled);
-	
+
 	void login();
 };
 

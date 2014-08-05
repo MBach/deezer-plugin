@@ -2,19 +2,31 @@
 #include "settings.h"
 #include "webview.h"
 #include "cookiejar.h"
+#include "networkaccessmanager.h"
 
 #include <QDesktopServices>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QWebView>
+#include <QXmlStreamReader>
 
 #include <QtDebug>
 
 DeezerPlugin::DeezerPlugin()
-	: QObject(), _networkAccessManager(new QNetworkAccessManager(this))
-
+	: QObject()//, _networkAccessManager(new NetworkAccessManager)
 {
-	_networkAccessManager->setCookieJar(new CookieJar(this));
+	NetworkAccessManager::getInstance()->setCookieJar(new CookieJar);
+	QWebSettings *s = QWebSettings::globalSettings();
+	s->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
+	s->setAttribute(QWebSettings::PluginsEnabled, true);
+	s->setAttribute(QWebSettings::JavascriptEnabled, true);
+	s->setAttribute(QWebSettings::JavascriptCanOpenWindows, true);
+	s->setAttribute(QWebSettings::JavascriptCanCloseWindows, true);
+	s->setAttribute(QWebSettings::DnsPrefetchEnabled, true);
+	s->setAttribute(QWebSettings::LocalStorageEnabled, true);
+	s->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, true);
+	s->setAttribute(QWebSettings::LocalContentCanAccessFileUrls, true);
+	s->setThirdPartyCookiePolicy(QWebSettings::AlwaysAllowThirdPartyCookies);
 }
 
 DeezerPlugin::~DeezerPlugin()
@@ -30,7 +42,7 @@ QWidget* DeezerPlugin::configPage()
 {
 	QWidget *widget = new QWidget();
 	_config.setupUi(widget);
-	
+
 	Settings *settings = Settings::getInstance();
 	bool b = settings->value("DeezerPlugin/save").toBool();
 	_config.saveCredentialsCheckBox->setChecked(b);
@@ -40,26 +52,56 @@ QWidget* DeezerPlugin::configPage()
 		_config.loginLineEdit->setText(QByteArray::fromBase64(lba));
 		_config.passwordLineEdit->setText(QByteArray::fromBase64(pba));
 	}
-	
+
 	connect(_config.saveCredentialsCheckBox, &QCheckBox::toggled, this, &DeezerPlugin::saveCredentials);
 	connect(_config.openConnectPopup, &QPushButton::clicked, this, &DeezerPlugin::login);
 	_config.logo->installEventFilter(this);
+
+	//this->login();
 	return widget;
+}
+
+void DeezerPlugin::init()
+{
+	qDebug() << Q_FUNC_INFO;
 }
 
 bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 {
-    if (event->type() == QEvent::MouseButtonPress) {
+	if (event->type() == QEvent::MouseButtonPress) {
 		QDesktopServices::openUrl(QUrl("http://www.deezer.com"));
 		return true;
-    } else {
-        return QObject::eventFilter(obj, event);
-    }
+	} else {
+		return QObject::eventFilter(obj, event);
+	}
 }
 
 void DeezerPlugin::setMediaPlayer(QWeakPointer<MediaPlayer> mediaPlayer)
 {
 	_mediaPlayer = mediaPlayer;
+}
+
+void DeezerPlugin::replyFinished(QNetworkReply *reply)
+{
+	QByteArray ba = reply->readAll();
+	qDebug() << Q_FUNC_INFO << ba;
+	/*QXmlStreamReader xml(ba);
+	while(!xml.atEnd() && !xml.hasError()) {
+
+		QXmlStreamReader::TokenType token = xml.readNext();
+
+		// Parse start elements
+		if (token == QXmlStreamReader::StartElement) {
+			if (xml.name() == "release-group") {
+				if (xml.attributes().hasAttribute("id")) {
+					QStringRef sr = xml.attributes().value("id");
+					if (xml.readNextStartElement() && xml.name() == "title") {
+						map.insert(xml.readElementText().toLower(), sr.toString());
+					}
+				}
+			}
+		}
+	}*/
 }
 
 void DeezerPlugin::saveCredentials(bool enabled)
@@ -78,15 +120,20 @@ void DeezerPlugin::saveCredentials(bool enabled)
 	}
 }
 
+#include <QWebFrame>
+
 void DeezerPlugin::login()
 {
 	qDebug() << Q_FUNC_INFO;
 	WebView *webView = new WebView;
-	_pages.append(webView);
-	webView->page()->setNetworkAccessManager(_networkAccessManager);
-	
+	//webView->page()->setNetworkAccessManager(_networkAccessManager);
+	//webView->setUrl(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
+
 	// HTML files from qrc:// does not work
-	QNetworkRequest *init = new QNetworkRequest(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
-	webView->load(*init);
+	//QNetworkRequest *init = new QNetworkRequest(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
+	webView->loadUrl(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
 	webView->show();
+
+	//_networkAccessManager->get(QNetworkRequest(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html")));
+	_pages.append(webView);
 }

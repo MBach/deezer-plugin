@@ -39,92 +39,45 @@
 **
 ****************************************************************************/
 
-#ifndef COOKIEJAR_H
-#define COOKIEJAR_H
+#ifndef NETWORKACCESSMANAGER_H
+#define NETWORKACCESSMANAGER_H
 
-#include <QtNetwork/QNetworkCookieJar>
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkRequest>
 
-#include <QtCore/QAbstractItemModel>
-#include <QtCore/QStringList>
-
-#include <QtWidgets/QDialog>
-#include <QtWidgets/QTableView>
-
-QT_BEGIN_NAMESPACE
-class QSortFilterProxyModel;
-class QKeyEvent;
-QT_END_NAMESPACE
-
-class AutoSaver;
-
-class CookieJar : public QNetworkCookieJar
+class NetworkAccessManager : public QNetworkAccessManager
 {
-	friend class CookieModel;
 	Q_OBJECT
-	Q_PROPERTY(AcceptPolicy acceptPolicy READ acceptPolicy WRITE setAcceptPolicy)
-	Q_PROPERTY(KeepPolicy keepPolicy READ keepPolicy WRITE setKeepPolicy)
-	Q_PROPERTY(QStringList blockedCookies READ blockedCookies WRITE setBlockedCookies)
-	Q_PROPERTY(QStringList allowedCookies READ allowedCookies WRITE setAllowedCookies)
-	Q_PROPERTY(QStringList allowForSessionCookies READ allowForSessionCookies WRITE setAllowForSessionCookies)
-	Q_ENUMS(KeepPolicy)
-	Q_ENUMS(AcceptPolicy)
-
-signals:
-	void cookiesChanged();
 
 public:
-	enum AcceptPolicy {
-		AcceptAlways,
-		AcceptNever,
-		AcceptOnlyFromSitesNavigatedTo
-	};
+	NetworkAccessManager(QObject *parent = 0);
 
-	enum KeepPolicy {
-		KeepUntilExpire,
-		KeepUntilExit,
-		KeepUntilTimeLimit
-	};
+	/** Singleton Pattern to easily use Settings everywhere in the app. */
+	static NetworkAccessManager* getInstance();
 
-	CookieJar(QObject *parent = 0);
-	~CookieJar();
-
-	QList<QNetworkCookie> cookiesForUrl(const QUrl &url) const;
-	bool setCookiesFromUrl(const QList<QNetworkCookie> &cookieList, const QUrl &url);
-
-	AcceptPolicy acceptPolicy() const;
-	void setAcceptPolicy(AcceptPolicy policy);
-
-	KeepPolicy keepPolicy() const;
-	void setKeepPolicy(KeepPolicy policy);
-
-	QStringList blockedCookies() const;
-	QStringList allowedCookies() const;
-	QStringList allowForSessionCookies() const;
-
-	void setBlockedCookies(const QStringList &list);
-	void setAllowedCookies(const QStringList &list);
-	void setAllowForSessionCookies(const QStringList &list);
-
-public slots:
-	void clear();
-	void loadSettings();
-
-private slots:
-	void save();
+	virtual QNetworkReply* createRequest ( Operation op, const QNetworkRequest & req, QIODevice * outgoingData = 0 );
 
 private:
-	void purgeOldCookies();
-	void load();
-	bool m_loaded;
-	AutoSaver *m_saveTimer;
+	QList<QString> sslTrustedHostList;
+	qint64 requestFinishedCount;
+	qint64 requestFinishedFromCacheCount;
+	qint64 requestFinishedPipelinedCount;
+	qint64 requestFinishedSecureCount;
+	qint64 requestFinishedDownloadBufferCount;
 
-	AcceptPolicy m_acceptCookies;
-	KeepPolicy m_keepCookies;
+	/** The unique instance of this class. */
+	static NetworkAccessManager *networkAccessManager;
 
-	QStringList m_exceptions_block;
-	QStringList m_exceptions_allow;
-	QStringList m_exceptions_allowForSession;
+public slots:
+	void loadSettings();
+	void requestFinished(QNetworkReply *reply);
+
+private slots:
+	//void authenticationRequired(QNetworkReply *reply, QAuthenticator *auth);
+	//void proxyAuthenticationRequired(const QNetworkProxy &proxy, QAuthenticator *auth);
+	//#ifndef QT_NO_OPENSSL
+	//	void sslErrors(QNetworkReply *reply, const QList<QSslError> &error);
+	//#endif
 };
 
-#endif // COOKIEJAR_H
-
+#endif // NETWORKACCESSMANAGER_H

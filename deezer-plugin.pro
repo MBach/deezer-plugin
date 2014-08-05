@@ -29,13 +29,15 @@ HEADERS += basicplugininterface.h \
     deezerplugin.h \
     webview.h \
     cookiejar.h \
-    autosaver.h
+    autosaver.h \
+    networkaccessmanager.h
 
 SOURCES += \
     deezerplugin.cpp \
     webview.cpp \
     cookiejar.cpp \
-    autosaver.cpp
+    autosaver.cpp \
+    networkaccessmanager.cpp
 
 RESOURCES += \
     resources.qrc
