@@ -30,7 +30,6 @@ private:
 
 	QWeakPointer<MediaPlayer> _mediaPlayer;
 
-	//NetworkAccessManager *_networkAccessManager;
 	QList<QWebView*> _pages;
 
 protected:
@@ -40,6 +39,8 @@ public:
 	explicit DeezerPlugin();
 
 	virtual ~DeezerPlugin();
+
+	virtual QStringList classesToExtend();
 
 	virtual QWidget* configPage();
 

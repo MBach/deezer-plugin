@@ -13,10 +13,11 @@
 #include <QtDebug>
 
 DeezerPlugin::DeezerPlugin()
-	: QObject()//, _networkAccessManager(new NetworkAccessManager)
+	: QObject()
 {
 	NetworkAccessManager::getInstance()->setCookieJar(new CookieJar);
 	QWebSettings *s = QWebSettings::globalSettings();
+	/// XXX
 	s->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
 	s->setAttribute(QWebSettings::PluginsEnabled, true);
 	s->setAttribute(QWebSettings::JavascriptEnabled, true);
@@ -36,6 +37,13 @@ DeezerPlugin::~DeezerPlugin()
 		view = NULL;
 	}
 	_pages.clear();
+}
+
+QStringList DeezerPlugin::classesToExtend()
+{
+	QStringList l;
+	l << "QListWidget" << "QWidget";
+	return l;
 }
 
 QWidget* DeezerPlugin::configPage()
