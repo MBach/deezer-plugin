@@ -42,6 +42,7 @@ public:
 
 	virtual QWidget* configPage();
 
+
 	virtual void init();
 
 	inline virtual bool isConfigurable() const { return true; }
@@ -55,6 +56,9 @@ public:
 	inline virtual QString version() const { return "0.1"; }
 
 	void search(const QString &expr);
+
+	virtual void addCheckBox(QWidget *w);
+	virtual void dispatchResults(Request request, QListWidget *list);
 
 private slots:
 	void replyFinished(QNetworkReply *);

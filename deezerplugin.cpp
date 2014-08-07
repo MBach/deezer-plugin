@@ -43,7 +43,7 @@ DeezerPlugin::~DeezerPlugin()
 QStringList DeezerPlugin::classesToExtend()
 {
 	QStringList l;
-	l << "QListWidget" << "QWidget";
+	l << "SearchDialog";
 	return l;
 }
 
@@ -67,6 +67,24 @@ QWidget* DeezerPlugin::configPage()
 	_config.logo->installEventFilter(this);
 
 	return widget;
+}
+
+void DeezerPlugin::addCheckBox(QWidget *w)
+{
+	QCheckBox *checkBox = new QCheckBox;
+	checkBox->setChecked(true);
+	checkBox->setText("Deezer");
+	if (w->layout()) {
+		qDebug() << w->layout();
+	} else {
+		qDebug() << "nope";
+	}
+	//w->layout()->addWidget(w);
+}
+
+void DeezerPlugin::dispatchResults(Request request, QListWidget *list)
+{
+	qDebug() << Q_FUNC_INFO << "not implemented";
 }
 
 void DeezerPlugin::init()

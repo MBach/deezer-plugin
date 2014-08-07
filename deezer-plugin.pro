@@ -31,7 +31,8 @@ HEADERS += basicplugin.h \
     webview.h \
     cookiejar.h \
     autosaver.h \
-    networkaccessmanager.h
+    networkaccessmanager.h \
+    searchmediaplayerplugin.h
 
 SOURCES += \
     deezerplugin.cpp \
