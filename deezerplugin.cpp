@@ -5,6 +5,7 @@
 #include "networkaccessmanager.h"
 
 #include <QDesktopServices>
+#include <QJsonDocument>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QWebView>
@@ -65,7 +66,6 @@ QWidget* DeezerPlugin::configPage()
 	connect(_config.openConnectPopup, &QPushButton::clicked, this, &DeezerPlugin::login);
 	_config.logo->installEventFilter(this);
 
-	//this->login();
 	return widget;
 }
 
@@ -112,6 +112,14 @@ void DeezerPlugin::replyFinished(QNetworkReply *reply)
 	}*/
 }
 
+void DeezerPlugin::search(const QString &expr)
+{
+	qDebug() << Q_FUNC_INFO;
+	QNetworkRequest r;
+	r.setUrl(QUrl("http://api.deezer.com/search/album?q=" + expr));
+	NetworkAccessManager::getInstance()->get(r);
+}
+
 void DeezerPlugin::saveCredentials(bool enabled)
 {
 	Settings *settings = Settings::getInstance();
@@ -128,20 +136,14 @@ void DeezerPlugin::saveCredentials(bool enabled)
 	}
 }
 
-#include <QWebFrame>
-
 void DeezerPlugin::login()
 {
 	qDebug() << Q_FUNC_INFO;
 	WebView *webView = new WebView;
-	//webView->page()->setNetworkAccessManager(_networkAccessManager);
-	//webView->setUrl(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
 
 	// HTML files from qrc:// does not work
-	//QNetworkRequest *init = new QNetworkRequest(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
 	webView->loadUrl(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
 	webView->show();
 
-	//_networkAccessManager->get(QNetworkRequest(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html")));
 	_pages.append(webView);
 }

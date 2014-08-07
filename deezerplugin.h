@@ -2,12 +2,10 @@
 #define DEEZERPLUGIN_H
 
 #include "miamcore_global.h"
-#include "mediaplayerplugininterface.h"
+#include "searchmediaplayerplugin.h"
 #include "mediaplayer.h"
 
-#include <QObject>
-#include <QNetworkAccessManager>
-
+#include <QNetworkReply>
 
 #include "ui_config.h"
 
@@ -19,11 +17,11 @@ class QWebView;
  * \version     0.1
  * \copyright   GNU General Public License v3
  */
-class DeezerPlugin : public QObject, public MediaPlayerPluginInterface
+class DeezerPlugin : public QObject, public SearchMediaPlayerPlugin
 {
 	Q_OBJECT
-	Q_PLUGIN_METADATA(IID MediaPlayerPluginInterface_iid)
-	Q_INTERFACES(MediaPlayerPluginInterface)
+	Q_PLUGIN_METADATA(IID SearchMediaPlayerPlugin_iid)
+	Q_INTERFACES(SearchMediaPlayerPlugin)
 
 private:
 	Ui::DeezerPluginConfigPage _config;
@@ -55,6 +53,8 @@ public:
 	virtual void setMediaPlayer(QWeakPointer<MediaPlayer> mediaPlayer);
 
 	inline virtual QString version() const { return "0.1"; }
+
+	void search(const QString &expr);
 
 private slots:
 	void replyFinished(QNetworkReply *);
