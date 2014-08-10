@@ -3,9 +3,9 @@
 #include "webview.h"
 #include "cookiejar.h"
 #include "networkaccessmanager.h"
+#include "abstractsearchdialog.h"
 
 #include <QDesktopServices>
-#include <QJsonDocument>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QWebView>
@@ -14,9 +14,12 @@
 #include <QtDebug>
 
 DeezerPlugin::DeezerPlugin()
-	: QObject()
+	: QObject(), _searchDialog(NULL), _checkBox(NULL)
 {
-	NetworkAccessManager::getInstance()->setCookieJar(new CookieJar);
+	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
+	nam->setCookieJar(new CookieJar);
+	connect(nam, &QNetworkAccessManager::finished, this, &DeezerPlugin::replyFinished);
+
 	QWebSettings *s = QWebSettings::globalSettings();
 	/// XXX
 	s->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
@@ -33,18 +36,13 @@ DeezerPlugin::DeezerPlugin()
 
 DeezerPlugin::~DeezerPlugin()
 {
+	qDebug() << Q_FUNC_INFO;
 	foreach (QWebView *view, _pages) {
 		delete view;
 		view = NULL;
 	}
 	_pages.clear();
-}
-
-QStringList DeezerPlugin::classesToExtend()
-{
-	QStringList l;
-	l << "SearchDialog";
-	return l;
+	delete _checkBox;
 }
 
 QWidget* DeezerPlugin::configPage()
@@ -69,22 +67,34 @@ QWidget* DeezerPlugin::configPage()
 	return widget;
 }
 
-void DeezerPlugin::addCheckBox(QWidget *w)
+void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 {
-	QCheckBox *checkBox = new QCheckBox;
-	checkBox->setChecked(true);
-	checkBox->setText("Deezer");
-	if (w->layout()) {
-		qDebug() << w->layout();
-	} else {
-		qDebug() << "nope";
-	}
-	//w->layout()->addWidget(w);
+	_checkBox = new QCheckBox;
+	_checkBox->setChecked(true);
+	_checkBox->setText("Deezer");
+	connect(w, &AbstractSearchDialog::aboutToSearch, this, &DeezerPlugin::search);
+	connect(this, &DeezerPlugin::searchComplete, w, &AbstractSearchDialog::processResults);
+
+	_searchDialog = w;
+	_searchDialog->addSource(_checkBox);
+	_artists = w->artists();
+	_albums = w->albums();
+	_tracks = w->tracks();
 }
 
 void DeezerPlugin::dispatchResults(Request request, QListWidget *list)
 {
-	qDebug() << Q_FUNC_INFO << "not implemented";
+	switch (request) {
+	case Artist:
+		_artists = list;
+		break;
+	case Album:
+		_albums = list;
+		break;
+	case Track:
+		_tracks = list;
+		break;
+	}
 }
 
 void DeezerPlugin::init()
@@ -110,31 +120,59 @@ void DeezerPlugin::setMediaPlayer(QWeakPointer<MediaPlayer> mediaPlayer)
 void DeezerPlugin::replyFinished(QNetworkReply *reply)
 {
 	QByteArray ba = reply->readAll();
-	qDebug() << Q_FUNC_INFO << ba;
-	/*QXmlStreamReader xml(ba);
+	QXmlStreamReader xml(ba);
+
+	QList<QListWidgetItem*> results;
+
 	while(!xml.atEnd() && !xml.hasError()) {
 
 		QXmlStreamReader::TokenType token = xml.readNext();
 
 		// Parse start elements
 		if (token == QXmlStreamReader::StartElement) {
-			if (xml.name() == "release-group") {
-				if (xml.attributes().hasAttribute("id")) {
-					QStringRef sr = xml.attributes().value("id");
-					if (xml.readNextStartElement() && xml.name() == "title") {
-						map.insert(xml.readElementText().toLower(), sr.toString());
-					}
+			if (xml.name() == "album") {
+				QString element;
+				while (xml.name() != "title" && !xml.hasError()) {
+					xml.readNext();
+				}
+				element = xml.readElementText();
+				while (xml.name() != "artist" && !xml.hasError()) {
+					xml.readNext();
+				}
+				while (xml.name() != "name" && !xml.hasError()) {
+					xml.readNext();
+				}
+				if (!element.isEmpty()) {
+					element += " – " + xml.readElementText();
+					qDebug() << "deezer-album" << element;
+					QListWidgetItem *item = new QListWidgetItem(QIcon(":/icon"), element);
+					results.append(item);
 				}
 			}
 		}
-	}*/
+	}
+	emit searchComplete(SearchMediaPlayerPlugin::Album, results);
 }
 
 void DeezerPlugin::search(const QString &expr)
 {
-	qDebug() << Q_FUNC_INFO;
+	if (!_checkBox->isChecked()) {
+		qDebug() << "Deezer is currenlty disabled";
+		return;
+	}
+
+	// Do not spam remote location with single character request
+	if (expr.length() <= 1) {
+		return;
+	}
+
 	QNetworkRequest r;
-	r.setUrl(QUrl("http://api.deezer.com/search/album?q=" + expr));
+	/// XXX: escape this
+	QString strRequest = "http://api.deezer.com/search/album?output=xml&limit=5&q=" + expr;
+
+	qDebug() << Q_FUNC_INFO << "request" << strRequest;
+
+	r.setUrl(QUrl(strRequest));
 	NetworkAccessManager::getInstance()->get(r);
 }
 

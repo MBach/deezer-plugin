@@ -2,8 +2,8 @@
 #define DEEZERPLUGIN_H
 
 #include "miamcore_global.h"
-#include "searchmediaplayerplugin.h"
 #include "mediaplayer.h"
+#include "searchmediaplayerplugin.h"
 
 #include <QNetworkReply>
 
@@ -27,8 +27,12 @@ private:
 	Ui::DeezerPluginConfigPage _config;
 
 	QWeakPointer<MediaPlayer> _mediaPlayer;
-
+	AbstractSearchDialog* _searchDialog;
 	QList<QWebView*> _pages;
+	QListWidget *_artists;
+	QListWidget *_albums;
+	QListWidget *_tracks;
+	QCheckBox *_checkBox;
 
 protected:
 	bool eventFilter(QObject *obj, QEvent *event);
@@ -38,10 +42,7 @@ public:
 
 	virtual ~DeezerPlugin();
 
-	virtual QStringList classesToExtend();
-
 	virtual QWidget* configPage();
-
 
 	virtual void init();
 
@@ -55,17 +56,17 @@ public:
 
 	inline virtual QString version() const { return "0.1"; }
 
-	void search(const QString &expr);
-
-	virtual void addCheckBox(QWidget *w);
+	virtual void setSearchDialog(AbstractSearchDialog *w);
 	virtual void dispatchResults(Request request, QListWidget *list);
 
 private slots:
-	void replyFinished(QNetworkReply *);
-
-	void saveCredentials(bool enabled);
-
 	void login();
+	void replyFinished(QNetworkReply *);
+	void saveCredentials(bool enabled);
+	void search(const QString &expr);
+
+signals:
+	void searchComplete(SearchMediaPlayerPlugin::Request, QList<QListWidgetItem*> results);
 };
 
 #endif // DEEZERPLUGIN_H
