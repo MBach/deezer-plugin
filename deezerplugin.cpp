@@ -82,16 +82,16 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 	_tracks = w->tracks();
 }
 
-void DeezerPlugin::dispatchResults(Request request, QListWidget *list)
+void DeezerPlugin::dispatchResults(AbstractSearchDialog::Request request, QListView *list)
 {
 	switch (request) {
-	case Artist:
+	case AbstractSearchDialog::Artist:
 		_artists = list;
 		break;
-	case Album:
+	case AbstractSearchDialog::Album:
 		_albums = list;
 		break;
-	case Track:
+	case AbstractSearchDialog::Track:
 		_tracks = list;
 		break;
 	}
@@ -122,7 +122,7 @@ void DeezerPlugin::replyFinished(QNetworkReply *reply)
 	QByteArray ba = reply->readAll();
 	QXmlStreamReader xml(ba);
 
-	QList<QListWidgetItem*> results;
+	QList<QStandardItem*> results;
 
 	while(!xml.atEnd() && !xml.hasError()) {
 
@@ -145,13 +145,14 @@ void DeezerPlugin::replyFinished(QNetworkReply *reply)
 				if (!element.isEmpty()) {
 					element += " – " + xml.readElementText();
 					qDebug() << "deezer-album" << element;
-					QListWidgetItem *item = new QListWidgetItem(QIcon(":/icon"), element);
+					QStandardItem *item = new QStandardItem(QIcon(":/icon"), element);
+					item->setData(_checkBox->text(), Qt::UserRole + 1);
 					results.append(item);
 				}
 			}
 		}
 	}
-	emit searchComplete(SearchMediaPlayerPlugin::Album, results);
+	emit searchComplete(AbstractSearchDialog::Album, results);
 }
 
 void DeezerPlugin::search(const QString &expr)

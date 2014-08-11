@@ -29,9 +29,9 @@ private:
 	QWeakPointer<MediaPlayer> _mediaPlayer;
 	AbstractSearchDialog* _searchDialog;
 	QList<QWebView*> _pages;
-	QListWidget *_artists;
-	QListWidget *_albums;
-	QListWidget *_tracks;
+	QListView *_artists;
+	QListView *_albums;
+	QListView *_tracks;
 	QCheckBox *_checkBox;
 
 protected:
@@ -57,7 +57,7 @@ public:
 	inline virtual QString version() const { return "0.1"; }
 
 	virtual void setSearchDialog(AbstractSearchDialog *w);
-	virtual void dispatchResults(Request request, QListWidget *list);
+	virtual void dispatchResults(AbstractSearchDialog::Request request, QListView *list);
 
 private slots:
 	void login();
@@ -66,7 +66,7 @@ private slots:
 	void search(const QString &expr);
 
 signals:
-	void searchComplete(SearchMediaPlayerPlugin::Request, QList<QListWidgetItem*> results);
+	void searchComplete(AbstractSearchDialog::Request, QList<QStandardItem*> results);
 };
 
 #endif // DEEZERPLUGIN_H
