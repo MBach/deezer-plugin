@@ -4,10 +4,12 @@
 #include "miamcore_global.h"
 #include "mediaplayer.h"
 #include "searchmediaplayerplugin.h"
+#include "model/remotetrack.h"
 
 #include <QNetworkReply>
-
+#include <QXmlStreamReader>
 #include "ui_config.h"
+#include "deezerwebplayer.h"
 
 class QWebView;
 
@@ -34,6 +36,8 @@ private:
 	QListView *_tracks;
 	QCheckBox *_checkBox;
 
+	DeezerWebPlayer *_webPlayer;
+
 protected:
 	bool eventFilter(QObject *obj, QEvent *event);
 
@@ -43,8 +47,6 @@ public:
 	virtual ~DeezerPlugin();
 
 	virtual QWidget* configPage();
-
-	virtual void init();
 
 	inline virtual bool isConfigurable() const { return true; }
 
@@ -57,16 +59,21 @@ public:
 	inline virtual QString version() const { return "0.1"; }
 
 	virtual void setSearchDialog(AbstractSearchDialog *w);
-	virtual void dispatchResults(AbstractSearchDialog::Request request, QListView *list);
 
 private slots:
 	void login();
-	void replyFinished(QNetworkReply *);
+	void extractAlbum(QXmlStreamReader &xml);
+	void searchRequestFinished(QXmlStreamReader &xml);
 	void saveCredentials(bool enabled);
 	void search(const QString &expr);
 
+	void artistWasDoubleClicked(const QModelIndex &index);
+	void albumWasDoubleClicked(const QModelIndex &index);
+	void trackWasDoubleClicked(const QModelIndex &index);
+
 signals:
 	void searchComplete(AbstractSearchDialog::Request, QList<QStandardItem*> results);
+	void aboutToProcessRemoteTracks(const std::list<RemoteTrack> &tracks);
 };
 
 #endif // DEEZERPLUGIN_H

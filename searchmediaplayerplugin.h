@@ -14,8 +14,6 @@ class MIAMCORE_LIBRARY SearchMediaPlayerPlugin : public MediaPlayerPlugin
 public:
 	virtual ~SearchMediaPlayerPlugin() {}
 
-	virtual void dispatchResults(AbstractSearchDialog::Request, QListView *list) = 0;
-
 	virtual void setSearchDialog(AbstractSearchDialog *dialog) = 0;
 };
 QT_BEGIN_NAMESPACE

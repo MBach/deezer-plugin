@@ -1,4 +1,4 @@
-QT      += widgets multimedia webkitwidgets
+QT      += qml quick widgets multimedia script webkit webkitwidgets
 
 TARGET   = $$qtLibraryTarget(deezer-plugin)
 TEMPLATE = lib
@@ -33,14 +33,18 @@ HEADERS += basicplugin.h \
     autosaver.h \
     networkaccessmanager.h \
     searchmediaplayerplugin.h \
-    abstractsearchdialog.h
+    abstractsearchdialog.h \
+    model/remotetrack.h \
+    deezerwebplayer.h
 
 SOURCES += \
     deezerplugin.cpp \
     webview.cpp \
     cookiejar.cpp \
     autosaver.cpp \
-    networkaccessmanager.cpp
+    networkaccessmanager.cpp \
+    model/remotetrack.cpp \
+    deezerwebplayer.cpp
 
 RESOURCES += \
     resources.qrc
@@ -52,4 +56,5 @@ TRANSLATIONS += translations/Deezer-Plugin_en.ts \
     translations/Deezer-Plugin_fr.ts
 
 OTHER_FILES += \
-    player_basic.html
+    player_basic.html \
+    dz.js

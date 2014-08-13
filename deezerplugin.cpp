@@ -9,16 +9,27 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QWebView>
-#include <QXmlStreamReader>
 
 #include <QtDebug>
 
 DeezerPlugin::DeezerPlugin()
-	: QObject(), _searchDialog(NULL), _checkBox(NULL)
+	: QObject(), _searchDialog(NULL), _checkBox(NULL), _webPlayer(new DeezerWebPlayer(this))
 {
 	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
 	nam->setCookieJar(new CookieJar);
-	connect(nam, &QNetworkAccessManager::finished, this, &DeezerPlugin::replyFinished);
+
+	// Dispatch replies: search for something, get artist info, get tracks from album, get track info
+	connect(nam, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
+		QNetworkRequest request = reply->request();
+		qDebug() << request.url();
+		QByteArray ba = reply->readAll();
+		QXmlStreamReader xml(ba);
+		if (request.url().toDisplayString().startsWith("http://api.deezer.com/album")) {
+			this->extractAlbum(xml);
+		} else {
+			this->searchRequestFinished(xml);
+		}
+	});
 
 	QWebSettings *s = QWebSettings::globalSettings();
 	/// XXX
@@ -74,32 +85,17 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 	_checkBox->setText("Deezer");
 	connect(w, &AbstractSearchDialog::aboutToSearch, this, &DeezerPlugin::search);
 	connect(this, &DeezerPlugin::searchComplete, w, &AbstractSearchDialog::processResults);
+	connect(this, &DeezerPlugin::aboutToProcessRemoteTracks, w, &AbstractSearchDialog::aboutToProcessRemoteTracks);
 
 	_searchDialog = w;
 	_searchDialog->addSource(_checkBox);
 	_artists = w->artists();
 	_albums = w->albums();
 	_tracks = w->tracks();
-}
 
-void DeezerPlugin::dispatchResults(AbstractSearchDialog::Request request, QListView *list)
-{
-	switch (request) {
-	case AbstractSearchDialog::Artist:
-		_artists = list;
-		break;
-	case AbstractSearchDialog::Album:
-		_albums = list;
-		break;
-	case AbstractSearchDialog::Track:
-		_tracks = list;
-		break;
-	}
-}
-
-void DeezerPlugin::init()
-{
-	qDebug() << Q_FUNC_INFO;
+	connect(_artists, &QListView::doubleClicked, this, &DeezerPlugin::artistWasDoubleClicked);
+	connect(_albums, &QListView::doubleClicked, this, &DeezerPlugin::albumWasDoubleClicked);
+	connect(_tracks, &QListView::doubleClicked, this, &DeezerPlugin::trackWasDoubleClicked);
 }
 
 bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
@@ -115,13 +111,80 @@ bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 void DeezerPlugin::setMediaPlayer(QWeakPointer<MediaPlayer> mediaPlayer)
 {
 	_mediaPlayer = mediaPlayer;
+	connect(_mediaPlayer.data(), &MediaPlayer::playRemoteTrack, _webPlayer, &DeezerWebPlayer::play);
 }
 
-void DeezerPlugin::replyFinished(QNetworkReply *reply)
+void DeezerPlugin::extractAlbum(QXmlStreamReader &xml)
 {
-	QByteArray ba = reply->readAll();
-	QXmlStreamReader xml(ba);
+	std::list<RemoteTrack> tracks;
+	bool artistFound = false;
+	bool albumFound = false;
+	QString artist;
+	QString album;
+	QString year;
+	int trackNumber = 1;
+	static QIcon icon(":/icon");
+	while (!xml.atEnd() && !xml.hasError()) {
 
+		QXmlStreamReader::TokenType token = xml.readNext();
+
+		// Parse start elements
+		if (token == QXmlStreamReader::StartElement) {
+			RemoteTrack track;
+			if (xml.name() == "title") {
+				album = xml.readElementText();
+				albumFound = true;
+			}
+			if (xml.name() == "artist") {
+				while (xml.name() != "name" && !xml.hasError()) {
+					xml.readNext();
+				}
+				artist = xml.readElementText();
+				artistFound = true;
+			}
+			if (xml.name() == "release_date") {
+				year = xml.readElementText();
+			}
+
+			if (artistFound && albumFound && xml.name() == "track") {
+				while (xml.name() != "id" && !xml.hasError()) {
+					xml.readNext();
+				}
+				track.setId(xml.readElementText());
+				while (xml.name() != "title" && !xml.hasError()) {
+					xml.readNext();
+				}
+				track.setTitle(xml.readElementText());
+				while (xml.name() != "link" && !xml.hasError()) {
+					xml.readNext();
+				}
+				track.setUrl(xml.readElementText());
+				while (xml.name() != "duration" && !xml.hasError()) {
+					xml.readNext();
+				}
+				track.setLength(xml.readElementText());
+				while (xml.name() != "rank" && !xml.hasError()) {
+					xml.readNext();
+				}
+				int r = xml.readElementText().toInt();
+				r = round((double)r / 166666);
+				track.setRating(r);
+
+				track.setArtist(artist);
+				track.setAlbum(album);
+				track.setIcon(icon);
+				/// FIXME. Example, Broken by Nine Inch Nails -> # are (1, ..., 6, 98, 99)
+				track.setTrackNumber(QString::number(trackNumber++));
+				track.setYear(year.left(4));
+				tracks.push_back(std::move(track));
+			}
+		}
+	}
+	emit aboutToProcessRemoteTracks(tracks);
+}
+
+void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
+{
 	QList<QStandardItem*> results;
 
 	while(!xml.atEnd() && !xml.hasError()) {
@@ -132,6 +195,11 @@ void DeezerPlugin::replyFinished(QNetworkReply *reply)
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "album") {
 				QString element;
+				QString id;
+				while (xml.name() != "id" && !xml.hasError()) {
+					xml.readNext();
+				}
+				id = xml.readElementText();
 				while (xml.name() != "title" && !xml.hasError()) {
 					xml.readNext();
 				}
@@ -146,7 +214,8 @@ void DeezerPlugin::replyFinished(QNetworkReply *reply)
 					element += " – " + xml.readElementText();
 					qDebug() << "deezer-album" << element;
 					QStandardItem *item = new QStandardItem(QIcon(":/icon"), element);
-					item->setData(_checkBox->text(), Qt::UserRole + 1);
+					item->setData(_checkBox->text(), AbstractSearchDialog::DT_Origin);
+					item->setData(id, AbstractSearchDialog::DT_Identifier);
 					results.append(item);
 				}
 			}
@@ -155,10 +224,41 @@ void DeezerPlugin::replyFinished(QNetworkReply *reply)
 	emit searchComplete(AbstractSearchDialog::Album, results);
 }
 
+void DeezerPlugin::artistWasDoubleClicked(const QModelIndex &index)
+{
+	QStandardItemModel *m = qobject_cast<QStandardItemModel*>(_artists->model());
+	if (m->itemFromIndex(index)->data(AbstractSearchDialog::DT_Origin) == _checkBox->text()) {
+		qDebug() << Q_FUNC_INFO << "not implemented";
+		qDebug() << m->itemFromIndex(index)->text();
+	}
+}
+
+void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
+{
+	QStandardItemModel *m = qobject_cast<QStandardItemModel*>(_albums->model());
+	QStandardItem *item = m->itemFromIndex(index);
+	// Filter items built by this plugin only
+	if (item->data(AbstractSearchDialog::DT_Origin) == _checkBox->text()) {
+
+		// Get album info: at least all the tracks
+		QString idAlbum = item->data(AbstractSearchDialog::DT_Identifier).toString();
+
+		NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/album/" + idAlbum + "?output=xml")));
+	}
+}
+
+void DeezerPlugin::trackWasDoubleClicked(const QModelIndex &index)
+{
+	QStandardItemModel *m = qobject_cast<QStandardItemModel*>(_tracks->model());
+	if (m->itemFromIndex(index)->data(AbstractSearchDialog::DT_Origin) == _checkBox->text()) {
+		qDebug() << Q_FUNC_INFO << "not implemented";
+		qDebug() << m->itemFromIndex(index)->text();
+	}
+}
+
 void DeezerPlugin::search(const QString &expr)
 {
 	if (!_checkBox->isChecked()) {
-		qDebug() << "Deezer is currenlty disabled";
 		return;
 	}
 
@@ -167,14 +267,8 @@ void DeezerPlugin::search(const QString &expr)
 		return;
 	}
 
-	QNetworkRequest r;
 	/// XXX: escape this
-	QString strRequest = "http://api.deezer.com/search/album?output=xml&limit=5&q=" + expr;
-
-	qDebug() << Q_FUNC_INFO << "request" << strRequest;
-
-	r.setUrl(QUrl(strRequest));
-	NetworkAccessManager::getInstance()->get(r);
+	NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/search/album?output=xml&limit=5&q=" + expr)));
 }
 
 void DeezerPlugin::saveCredentials(bool enabled)
