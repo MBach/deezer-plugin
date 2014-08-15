@@ -1,17 +1,12 @@
 import QtQuick 2.3
 import QtWebKit 3.0
 import QtQuick.Window 2.1
+import "jsdom/example/browser/browser.js" as JSDOM
 import "dz.js" as DeezerAPI
 
 Window {
-    id: window
 
     function helloDZ(msg) {
-
-        var d = window.document;
-
-        var s = '<li>text</li>';
-        d.createElement(s);
 
         console.log(msg)
 

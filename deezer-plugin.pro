@@ -20,31 +20,29 @@ CONFIG(release, debug|release) {
 
 INSTALLS += target
 
-HEADERS += basicplugin.h \
+HEADERS += model/remotetrack.h \
+    abstractsearchdialog.h \
+    autosaver.h \
+    basicplugin.h \
+    cookiejar.h \
+    deezerplugin.h \
+    deezerwebplayer.h \
+    filehelper.h \
     mediaplayer.h \
     mediaplayerplugin.h \
-    searchmediaplayerplugin \
     miamcore_global.h \
-    settings.h \
-    filehelper.h \
-    deezerplugin.h \
-    webview.h \
-    cookiejar.h \
-    autosaver.h \
     networkaccessmanager.h \
     searchmediaplayerplugin.h \
-    abstractsearchdialog.h \
-    model/remotetrack.h \
-    deezerwebplayer.h
+    settings.h \
+    webview.h
 
-SOURCES += \
-    deezerplugin.cpp \
-    webview.cpp \
-    cookiejar.cpp \
+SOURCES += model/remotetrack.cpp \
     autosaver.cpp \
+    cookiejar.cpp \
+    deezerplugin.cpp \
+    deezerwebplayer.cpp \
     networkaccessmanager.cpp \
-    model/remotetrack.cpp \
-    deezerwebplayer.cpp
+    webview.cpp
 
 RESOURCES += \
     resources.qrc

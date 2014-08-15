@@ -13,15 +13,17 @@
 #include <QtDebug>
 
 DeezerPlugin::DeezerPlugin()
-	: QObject(), _searchDialog(NULL), _checkBox(NULL), _webPlayer(new DeezerWebPlayer(this))
+	: QObject(), _searchDialog(NULL), _checkBox(NULL)
 {
 	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
 	nam->setCookieJar(new CookieJar);
 
+	_webPlayer = new DeezerWebPlayer(this);
+
 	// Dispatch replies: search for something, get artist info, get tracks from album, get track info
 	connect(nam, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
 		QNetworkRequest request = reply->request();
-		qDebug() << request.url();
+		// qDebug() << request.url();
 		QByteArray ba = reply->readAll();
 		QXmlStreamReader xml(ba);
 		if (request.url().toDisplayString().startsWith("http://api.deezer.com/album")) {
@@ -111,7 +113,11 @@ bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 void DeezerPlugin::setMediaPlayer(QWeakPointer<MediaPlayer> mediaPlayer)
 {
 	_mediaPlayer = mediaPlayer;
-	connect(_mediaPlayer.data(), &MediaPlayer::playRemoteTrack, _webPlayer, &DeezerWebPlayer::play);
+	connect(_mediaPlayer.data(), &MediaPlayer::pauseRemote, _webPlayer, &DeezerWebPlayer::pause);
+	connect(_mediaPlayer.data(), &MediaPlayer::playRemote, _webPlayer, &DeezerWebPlayer::play);
+	connect(_mediaPlayer.data(), &MediaPlayer::setVolumeRemote, _webPlayer, &DeezerWebPlayer::setVolume);
+
+	connect(_webPlayer, &DeezerWebPlayer::stateChanged, _mediaPlayer.data(), &MediaPlayer::stateChanged);
 }
 
 void DeezerPlugin::extractAlbum(QXmlStreamReader &xml)
