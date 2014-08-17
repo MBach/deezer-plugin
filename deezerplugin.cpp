@@ -18,8 +18,6 @@ DeezerPlugin::DeezerPlugin()
 	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
 	nam->setCookieJar(new CookieJar);
 
-	_webPlayer = new DeezerWebPlayer(this);
-
 	// Dispatch replies: search for something, get artist info, get tracks from album, get track info
 	connect(nam, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
 		QNetworkRequest request = reply->request();
@@ -110,15 +108,29 @@ bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 	}
 }
 
-void DeezerPlugin::setMediaPlayer(QWeakPointer<MediaPlayer> mediaPlayer)
+/*
+void DeezerPlugin::setRemoteMediaPlayer(RemoteMediaPlayer *remoteMediaPlayer)
 {
-	_mediaPlayer = mediaPlayer;
-	connect(_mediaPlayer.data(), &MediaPlayer::pauseRemote, _webPlayer, &DeezerWebPlayer::pause);
-	connect(_mediaPlayer.data(), &MediaPlayer::playRemote, _webPlayer, &DeezerWebPlayer::play);
+	_remoteMediaPlayer = remoteMediaPlayer;
+
+	_webPlayer = new DeezerWebPlayer(this);
+	//_config.deezerGroupBox->layout()->addWidget(_webPlayer->webView());
+
+	connect(_mediaPlayer.data(), &MediaPlayer::aboutToPauseRemoteWebPlayer, _webPlayer, &DeezerWebPlayer::pause);
+	connect(_mediaPlayer.data(), &MediaPlayer::aboutToPlayRemoteWebPlayer, _webPlayer, &DeezerWebPlayer::play);
+	connect(_mediaPlayer.data(), &MediaPlayer::aboutToResumeRemoteWebPlayer, _webPlayer, &DeezerWebPlayer::resume);
+	connect(_mediaPlayer.data(), &MediaPlayer::aboutToSeekRemoteWebPlayer, _webPlayer, &DeezerWebPlayer::seek);
+	connect(_mediaPlayer.data(), &MediaPlayer::aboutToStopWebPlayer, _webPlayer, &DeezerWebPlayer::stop);
 	connect(_mediaPlayer.data(), &MediaPlayer::setVolumeRemote, _webPlayer, &DeezerWebPlayer::setVolume);
 
-	connect(_webPlayer, &DeezerWebPlayer::stateChanged, _mediaPlayer.data(), &MediaPlayer::stateChanged);
+	connect(_webPlayer, &DeezerWebPlayer::positionChanged, _mediaPlayer.data(), &MediaPlayer::positionChanged);
+	connect(_webPlayer, &DeezerWebPlayer::trackHasEnded, this, [=]() {
+		emit _mediaPlayer.data()->stateChanged(QMediaPlayer::StoppedState);
+		emit _mediaPlayer.data()->mediaStatusChanged(QMediaPlayer::EndOfMedia);
+	});
+
 }
+*/
 
 void DeezerPlugin::extractAlbum(QXmlStreamReader &xml)
 {
@@ -299,7 +311,8 @@ void DeezerPlugin::login()
 	WebView *webView = new WebView;
 
 	// HTML files from qrc:// does not work
-	webView->loadUrl(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
+	//webView->loadUrl(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
+	webView->loadUrl(QUrl("http://bachelierm.free.fr/miamplayer/index.html"));
 	webView->show();
 
 	_pages.append(webView);

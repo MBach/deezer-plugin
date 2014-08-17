@@ -2,8 +2,7 @@
 #define DEEZERPLUGIN_H
 
 #include "miamcore_global.h"
-#include "mediaplayer.h"
-#include "searchmediaplayerplugin.h"
+#include "remotemediaplayerplugin.h"
 #include "model/remotetrack.h"
 
 #include <QNetworkReply>
@@ -16,19 +15,17 @@ class QWebView;
 /**
  * \brief       Deezer plugin
  * \author      Matthieu Bachelier
- * \version     0.1
+ * \version     0.2
  * \copyright   GNU General Public License v3
  */
-class DeezerPlugin : public QObject, public SearchMediaPlayerPlugin
+class DeezerPlugin : public QObject, public RemoteMediaPlayerPlugin
 {
 	Q_OBJECT
-	Q_PLUGIN_METADATA(IID SearchMediaPlayerPlugin_iid)
-	Q_INTERFACES(SearchMediaPlayerPlugin)
+	Q_PLUGIN_METADATA(IID RemoteMediaPlayerPlugin_iid)
+	Q_INTERFACES(RemoteMediaPlayerPlugin)
 
 private:
 	Ui::DeezerPluginConfigPage _config;
-
-	QWeakPointer<MediaPlayer> _mediaPlayer;
 	AbstractSearchDialog* _searchDialog;
 	QList<QWebView*> _pages;
 	QListView *_artists;
@@ -52,9 +49,9 @@ public:
 
 	inline virtual QString name() const { return "Deezer-Plugin"; }
 
-	inline virtual QWidget* providesView() { return NULL; }
+	virtual RemoteMediaPlayer * player() const { return _webPlayer;	}
 
-	virtual void setMediaPlayer(QWeakPointer<MediaPlayer> mediaPlayer);
+	inline virtual QWidget* providesView() { return NULL; }
 
 	inline virtual QString version() const { return "0.1"; }
 

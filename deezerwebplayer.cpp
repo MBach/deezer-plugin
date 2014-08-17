@@ -6,13 +6,11 @@
 
 #include <QtDebug>
 
-
 DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
-	QObject(parent)
+	RemoteMediaPlayer(parent), _webView(new WebView),  _deezerPlugin(parent), _stopButtonWasTriggered(false)
 {
-	/// XXX: how to play sound with invisible webView?
-	_webView = new WebView;
-	_webView->load(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
+	/// FIXME: how to play sound with invisible webView?
+	_webView->load(QUrl("http://bachelierm.free.fr/miamplayer/index.html"));
 	_webView->show();
 	_webView->page()->mainFrame()->addToJavaScriptWindowObject("dzWebPlayer", this);
 
@@ -23,21 +21,26 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 	Settings *settings = Settings::getInstance();
 
 	// Init callback actions
-	connect(_webView, &QWebView::loadFinished, this, [=]() {
-		QString positionChanged = "DZ.Event.subscribe('player_position', function(arg){ dzWebPlayer.positionChanged(arg[0], arg[1]); });";
+	connect(_webView->page()->mainFrame(), &QWebFrame::loadFinished, this, [=]() {
+		qDebug() << "loadFinished" << _webView->page()->mainFrame()->frameName();
+
+		QString positionChanged = "DZ.Event.subscribe('player_position', function(a){ dzWebPlayer.positionChanged(1000 * a[0], 1000 * a[1]); });";
 		_webView->page()->mainFrame()->evaluateJavaScript(positionChanged);
 
-		// QMediaPlayer::PausedState == 2
-		// QString playerPaused = "DZ.Event.subscribe('player_paused', function(arg){ dzWebPlayer.stateChanged(2); });";
-		// _webView->page()->mainFrame()->evaluateJavaScript(playerPaused);
+		QString playerStarted = "DZ.Event.subscribe('player_play', function(){ \
+				var t = DZ.player.getCurrentTrack(); \
+				dzWebPlayer.playerHasStarted(t.duration); });";
+		_webView->page()->mainFrame()->evaluateJavaScript(playerStarted);
 
-		QString playerPaused = "DZ.Event.subscribe('player_paused', function(arg){ dzWebPlayer.paused(); });";
+		QString playerPaused = "DZ.Event.subscribe('player_paused', function(){ dzWebPlayer.playerHasPaused(); });";
 		_webView->page()->mainFrame()->evaluateJavaScript(playerPaused);
+
+		QString trackEnded = "DZ.Event.subscribe('track_end', function(){ dzWebPlayer.trackHasEnded(); });";
+		_webView->page()->mainFrame()->evaluateJavaScript(trackEnded);
 
 		this->setVolume(settings->volume());
 	});
 }
-
 
 void DeezerWebPlayer::pause()
 {
@@ -49,9 +52,18 @@ void DeezerWebPlayer::play(const QUrl &track)
 	QString url = track.toString();
 	int slash = url.lastIndexOf("/");
 	QString id = url.mid(slash + 1);
-	QString playTrack = "DZ.player.playTracks([" + id + "], 0, function(response){ dzWebPlayer.log('load?'); });";
+	QString playTrack = "DZ.player.playTracks([" + id + "]);";
 	_webView->page()->mainFrame()->evaluateJavaScript(playTrack);
-	emit stateChanged(QMediaPlayer::PlayingState);
+}
+
+void DeezerWebPlayer::resume(const QUrl &)
+{
+	_webView->page()->mainFrame()->evaluateJavaScript("DZ.player.play();");
+}
+
+void DeezerWebPlayer::seek(float pos)
+{
+	_webView->page()->mainFrame()->evaluateJavaScript("DZ.player.seek(" + QString::number(pos * 100) + ");");
 }
 
 void DeezerWebPlayer::setVolume(int volume)
@@ -59,18 +71,29 @@ void DeezerWebPlayer::setVolume(int volume)
 	_webView->page()->mainFrame()->evaluateJavaScript("DZ.player.setVolume(" + QString::number(volume) + ");");
 }
 
-void DeezerWebPlayer::paused()
+void DeezerWebPlayer::stop()
 {
-	qDebug() << Q_FUNC_INFO;
-	emit stateChanged(QMediaPlayer::PausedState);
+	QVariant v = _webView->page()->mainFrame()->evaluateJavaScript("DZ.player.isPlaying();");
+	if (v.toBool()) {
+		_stopButtonWasTriggered = true;
+		_webView->page()->mainFrame()->evaluateJavaScript("DZ.player.pause();");
+	} else {
+		//_deezerPlugin->mediaPlayer().data()->setState(QMediaPlayer::StoppedState);
+	}
 }
 
-void DeezerWebPlayer::positionChanged(const QVariant &currentPosition, const QVariant &total)
+void DeezerWebPlayer::playerHasPaused()
 {
-	qDebug() << Q_FUNC_INFO << currentPosition << total;
+	if (_stopButtonWasTriggered) {
+		//_deezerPlugin->mediaPlayer().data()->setState(QMediaPlayer::StoppedState);
+		_stopButtonWasTriggered = false;
+	} else {
+		//_deezerPlugin->mediaPlayer().data()->setState(QMediaPlayer::PausedState);
+	}
 }
 
-void DeezerWebPlayer::log(const QVariant &callBack)
+void DeezerWebPlayer::playerHasStarted(int duration)
 {
-	qDebug() << Q_FUNC_INFO << callBack;
+	qDebug() << duration;
+	//_deezerPlugin->mediaPlayer().data()->setState(QMediaPlayer::PlayingState);
 }

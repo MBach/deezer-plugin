@@ -1,4 +1,4 @@
-QT      += qml quick widgets multimedia script webkit webkitwidgets
+QT      += widgets multimedia script webkit webkitwidgets
 
 TARGET   = $$qtLibraryTarget(deezer-plugin)
 TEMPLATE = lib
@@ -28,13 +28,12 @@ HEADERS += model/remotetrack.h \
     deezerplugin.h \
     deezerwebplayer.h \
     filehelper.h \
-    mediaplayer.h \
-    mediaplayerplugin.h \
     miamcore_global.h \
     networkaccessmanager.h \
-    searchmediaplayerplugin.h \
     settings.h \
-    webview.h
+    webview.h \
+    remotemediaplayer.h \
+    remotemediaplayerplugin.h
 
 SOURCES += model/remotetrack.cpp \
     autosaver.cpp \
@@ -42,7 +41,8 @@ SOURCES += model/remotetrack.cpp \
     deezerplugin.cpp \
     deezerwebplayer.cpp \
     networkaccessmanager.cpp \
-    webview.cpp
+    webview.cpp \
+    remotemediaplayer.cpp
 
 RESOURCES += \
     resources.qrc

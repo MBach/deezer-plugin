@@ -97,7 +97,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label">
+       <widget class="QLabel" name="labelWarning">
         <property name="font">
          <font>
           <italic>true</italic>
