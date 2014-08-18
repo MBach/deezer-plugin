@@ -13,7 +13,8 @@
 #include <QtDebug>
 
 DeezerPlugin::DeezerPlugin()
-	: QObject(), _searchDialog(NULL), _checkBox(NULL)
+	: QObject(), _artists(NULL), _albums(NULL), _tracks(NULL), _searchDialog(NULL),
+	  _checkBox(NULL), _webPlayer(new DeezerWebPlayer(this))
 {
 	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
 	nam->setCookieJar(new CookieJar);
@@ -107,30 +108,6 @@ bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 		return QObject::eventFilter(obj, event);
 	}
 }
-
-/*
-void DeezerPlugin::setRemoteMediaPlayer(RemoteMediaPlayer *remoteMediaPlayer)
-{
-	_remoteMediaPlayer = remoteMediaPlayer;
-
-	_webPlayer = new DeezerWebPlayer(this);
-	//_config.deezerGroupBox->layout()->addWidget(_webPlayer->webView());
-
-	connect(_mediaPlayer.data(), &MediaPlayer::aboutToPauseRemoteWebPlayer, _webPlayer, &DeezerWebPlayer::pause);
-	connect(_mediaPlayer.data(), &MediaPlayer::aboutToPlayRemoteWebPlayer, _webPlayer, &DeezerWebPlayer::play);
-	connect(_mediaPlayer.data(), &MediaPlayer::aboutToResumeRemoteWebPlayer, _webPlayer, &DeezerWebPlayer::resume);
-	connect(_mediaPlayer.data(), &MediaPlayer::aboutToSeekRemoteWebPlayer, _webPlayer, &DeezerWebPlayer::seek);
-	connect(_mediaPlayer.data(), &MediaPlayer::aboutToStopWebPlayer, _webPlayer, &DeezerWebPlayer::stop);
-	connect(_mediaPlayer.data(), &MediaPlayer::setVolumeRemote, _webPlayer, &DeezerWebPlayer::setVolume);
-
-	connect(_webPlayer, &DeezerWebPlayer::positionChanged, _mediaPlayer.data(), &MediaPlayer::positionChanged);
-	connect(_webPlayer, &DeezerWebPlayer::trackHasEnded, this, [=]() {
-		emit _mediaPlayer.data()->stateChanged(QMediaPlayer::StoppedState);
-		emit _mediaPlayer.data()->mediaStatusChanged(QMediaPlayer::EndOfMedia);
-	});
-
-}
-*/
 
 void DeezerPlugin::extractAlbum(QXmlStreamReader &xml)
 {

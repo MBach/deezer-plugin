@@ -7,6 +7,13 @@
 
 #include "miamcore_global.h"
 
+/**
+ * \brief		Settings class contains all relevant pairs of (keys, values) used by Miam-Player.
+ * \details		This class implements the Singleton pattern. Instead of using standard "this->value(QString)", lots of methods
+ * are built on-top of it. It keeps the code easy to read and some important enums are shared between plugins too.
+ * \author      Matthieu Bachelier
+ * \copyright   GNU General Public License v3
+ */
 class MIAMCORE_LIBRARY Settings : public QSettings
 {
 	Q_OBJECT
@@ -26,8 +33,6 @@ private:
 	QMap<QString, QVariant> fontFamilyMap;
 
 	QList<QVariant> locations;
-
-	QMap<QString, QByteArray> stylesheets;
 
 	QMap<QString, QVariant> columnStates;
 
@@ -88,6 +93,9 @@ public:
 	bool isCoversEnabled() const;
 
 	bool isCustomColors() const;
+
+	/** Returns true if background process is active to keep library up-to-date. */
+	bool isFileSystemMonitored() const;
 
 	bool isLibraryFilteredByArticles() const;
 
@@ -193,6 +201,9 @@ public slots:
 
 	/** Sets if the button in parameter is visible or not. */
 	void setMediaButtonVisible(const QString & buttonName, const bool &value);
+
+	/** Sets if MiamPlayer should launch background process to keep library up-to-date. */
+	void setMonitorFileSystem(bool b);
 
 	/// PlayBack options
 	void setPlaybackSeekTime(int t);

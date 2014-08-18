@@ -22,22 +22,19 @@ private:
 public:
 	explicit DeezerWebPlayer(DeezerPlugin *parent);
 
+	inline virtual QString host() const { return "www.deezer.com"; }
+
 	WebView * webView() const { return _webView; }
 
 public slots:
-	void pause();
-	void play(const QUrl &track);
-	void resume(const QUrl &);
-	void seek(float pos);
-	void setVolume(int volume);
-	void stop();
+	virtual void pause();
+	virtual void play(const QUrl &track);
+	virtual void resume();
+	virtual void seek(float pos);
+	virtual void setVolume(int volume);
+	virtual void stop();
 
 	void playerHasPaused();
-	void playerHasStarted(int duration);
-
-signals:
-	void positionChanged(double pos, double duration);
-	void trackHasEnded();
 };
 
 #endif // DEEZERWEBPLAYER_H

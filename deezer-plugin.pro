@@ -41,8 +41,7 @@ SOURCES += model/remotetrack.cpp \
     deezerplugin.cpp \
     deezerwebplayer.cpp \
     networkaccessmanager.cpp \
-    webview.cpp \
-    remotemediaplayer.cpp
+    webview.cpp
 
 RESOURCES += \
     resources.qrc
