@@ -70,11 +70,11 @@ NetworkAccessManager::NetworkAccessManager(QObject *parent)
 {
 	//connect(this, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)), SLOT(authenticationRequired(QNetworkReply*,QAuthenticator*)));
 	//connect(this, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)), SLOT(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)));
-	connect(this, SIGNAL(finished(QNetworkReply*)), SLOT(requestFinished(QNetworkReply*)));
-//#ifndef QT_NO_OPENSSL
-//	connect(this, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)),
-//			SLOT(sslErrors(QNetworkReply*,QList<QSslError>)));
-//#endif
+	connect(this, &QNetworkAccessManager::finished, this, &NetworkAccessManager::requestFinished);
+
+	//connect(this, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)), SLOT(sslErrors(QNetworkReply*,QList<QSslError>)));
+	connect(this, &QNetworkAccessManager::sslErrors, this, &NetworkAccessManager::ignoreSslErrors);
+
 	loadSettings();
 
 	QNetworkDiskCache *diskCache = new QNetworkDiskCache(this);
@@ -193,31 +193,15 @@ void NetworkAccessManager::loadSettings()
 		auth->setUser(proxyDialog.userNameLineEdit->text());
 		auth->setPassword(proxyDialog.passwordLineEdit->text());
 	}
-}
+}*/
 
-/*
-#ifndef QT_NO_OPENSSL
-void NetworkAccessManager::sslErrors(QNetworkReply *reply, const QList<QSslError> &error)
+void NetworkAccessManager::ignoreSslErrors(QNetworkReply *reply, const QList<QSslError> &)
 {
 	// check if SSL certificate has been trusted already
 	QString replyHost = reply->url().host() + QString(":%1").arg(reply->url().port());
-	if(! sslTrustedHostList.contains(replyHost)) {
+	if(!sslTrustedHostList.contains(replyHost)) {
 		//BrowserMainWindow *mainWindow = BrowserApplication::instance()->mainWindow();
-
-		QStringList errorStrings;
-		for (int i = 0; i < error.count(); ++i)
-			errorStrings += error.at(i).errorString();
-		QString errors = errorStrings.join(QLatin1String("\n"));
-		int ret = QMessageBox::warning(mainWindow, QCoreApplication::applicationName(),
-				tr("SSL Errors:\n\n%1\n\n%2\n\n"
-						"Do you want to ignore these errors for this host?").arg(reply->url().toString()).arg(errors),
-						QMessageBox::Yes | QMessageBox::No,
-						QMessageBox::No);
-		if (ret == QMessageBox::Yes) {
-			reply->ignoreSslErrors();
-			sslTrustedHostList.append(replyHost);
-		}
+		reply->ignoreSslErrors();
+		sslTrustedHostList.append(replyHost);
 	}
 }
-#endif
-*/

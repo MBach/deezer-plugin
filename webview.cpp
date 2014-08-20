@@ -61,10 +61,141 @@
 
 #include <QWebSecurityOrigin>
 
+WebPage::WebPage(QObject *parent)
+	: QWebPage(parent)
+	, m_keyboardModifiers(Qt::NoModifier)
+	, m_pressedButtons(Qt::NoButton)
+	, m_openInNewTab(false)
+{
+	setNetworkAccessManager(NetworkAccessManager::getInstance());
+	connect(this, SIGNAL(unsupportedContent(QNetworkReply*)), this, SLOT(handleUnsupportedContent(QNetworkReply*)));
+}
+
+bool WebPage::acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type)
+{
+	// ctrl open in new tab
+	// ctrl-shift open in new tab and select
+	// ctrl-alt open in new window
+	/*if (type == QWebPage::NavigationTypeLinkClicked
+		&& (m_keyboardModifiers & Qt::ControlModifier
+			|| m_pressedButtons == Qt::MidButton)) {
+		bool newWindow = (m_keyboardModifiers & Qt::AltModifier);
+		WebView *webView;
+		if (newWindow) {
+			BrowserApplication::instance()->newMainWindow();
+			BrowserMainWindow *newMainWindow = BrowserApplication::instance()->mainWindow();
+			webView = newMainWindow->currentTab();
+			newMainWindow->raise();
+			newMainWindow->activateWindow();
+			webView->setFocus();
+		} else {
+			bool selectNewTab = (m_keyboardModifiers & Qt::ShiftModifier);
+			webView = mainWindow()->tabWidget()->newTab(selectNewTab);
+		}
+		webView->load(request);
+		m_keyboardModifiers = Qt::NoModifier;
+		m_pressedButtons = Qt::NoButton;
+		return false;
+	}
+	if (frame == mainFrame()) {
+		m_loadingUrl = request.url();
+		emit loadingUrl(m_loadingUrl);
+	}
+	return QWebPage::acceptNavigationRequest(frame, request, type);*/
+	qDebug() << "acceptNavigationRequest" << request.url();
+	if (request.url().toString().contains("access_token=")) {
+		QString r = request.url().toString();
+		int i = r.indexOf("access_token=");
+		int j = r.mid(i + 13).indexOf('&');
+		QString t = r.mid(i + 13, j);
+		qDebug() << "token" << t;
+		if (!_tokenFound) {
+			emit token(t);
+		}
+	}
+	return true;
+}
+
+QWebPage *WebPage::createWindow(QWebPage::WebWindowType type)
+{
+	/*Q_UNUSED(type);
+	if (m_keyboardModifiers & Qt::ControlModifier || m_pressedButtons == Qt::MidButton)
+		m_openInNewTab = true;
+	if (m_openInNewTab) {
+		m_openInNewTab = false;
+		return mainWindow()->tabWidget()->newTab()->page();
+	}
+	BrowserApplication::instance()->newMainWindow();
+	BrowserMainWindow *mainWindow = BrowserApplication::instance()->mainWindow();
+	return mainWindow->currentTab()->page();*/
+	return new WebPage();
+}
+
+/*QObject *WebPage::createPlugin(const QString &classId, const QUrl &url, const QStringList &paramNames, const QStringList &paramValues)
+{
+	Q_UNUSED(url);
+	Q_UNUSED(paramNames);
+	Q_UNUSED(paramValues);
+	QUiLoader loader;
+	return loader.createWidget(classId, view());
+}*/
+
+void WebPage::handleUnsupportedContent(QNetworkReply *reply)
+{
+	QString errorString = reply->errorString();
+
+	if (m_loadingUrl != reply->url()) {
+		// sub resource of this page
+		qWarning() << "Resource" << reply->url().toEncoded() << "has unknown Content-Type, will be ignored.";
+		reply->deleteLater();
+		return;
+	}
+
+	if (reply->error() == QNetworkReply::NoError && !reply->header(QNetworkRequest::ContentTypeHeader).isValid()) {
+		errorString = "Unknown Content-Type";
+	}
+
+	QFile file(QLatin1String(":/notfound.html"));
+	bool isOpened = file.open(QIODevice::ReadOnly);
+	Q_ASSERT(isOpened);
+	Q_UNUSED(isOpened)
+
+	QString title = tr("Error loading page: %1").arg(reply->url().toString());
+	QString html = QString(QLatin1String(file.readAll()))
+						.arg(title)
+						.arg(errorString)
+						.arg(reply->url().toString());
+
+	QBuffer imageBuffer;
+	imageBuffer.open(QBuffer::ReadWrite);
+	QIcon icon = view()->style()->standardIcon(QStyle::SP_MessageBoxWarning, 0, view());
+	QPixmap pixmap = icon.pixmap(QSize(32,32));
+	if (pixmap.save(&imageBuffer, "PNG")) {
+		html.replace(QLatin1String("IMAGE_BINARY_DATA_HERE"),
+					 QString(QLatin1String(imageBuffer.buffer().toBase64())));
+	}
+
+	QList<QWebFrame*> frames;
+	frames.append(mainFrame());
+	while (!frames.isEmpty()) {
+		QWebFrame *frame = frames.takeFirst();
+		if (frame->url() == reply->url()) {
+			frame->setHtml(html, reply->url());
+			return;
+		}
+		QList<QWebFrame *> children = frame->childFrames();
+		foreach(QWebFrame *frame, children)
+			frames.append(frame);
+	}
+	if (m_loadingUrl == reply->url()) {
+		mainFrame()->setHtml(html, reply->url());
+	}
+}
+
 WebView::WebView(QWidget* parent)
 	: QWebView(parent)
 	, m_progress(0)
-	, m_page(new QWebPage(this))
+	, m_page(new WebPage(this))
 {
 	m_page->setNetworkAccessManager(NetworkAccessManager::getInstance());
 	m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "https://www.deezer.com", QWebSecurityOrigin::AllowSubdomains);

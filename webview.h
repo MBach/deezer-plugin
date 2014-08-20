@@ -52,6 +52,33 @@ class QNetworkReply;
 class QSslError;
 QT_END_NAMESPACE
 
+class WebPage : public QWebPage {
+	Q_OBJECT
+
+signals:
+	void loadingUrl(const QUrl &url);
+
+public:
+	WebPage(QObject *parent = 0);
+
+protected:
+	bool acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type);
+	QWebPage *createWindow(QWebPage::WebWindowType type);
+	//QObject *createPlugin(const QString &classId, const QUrl &url, const QStringList &paramNames, const QStringList &paramValues);
+
+private slots:
+	void handleUnsupportedContent(QNetworkReply *reply);
+
+private:
+	friend class WebView;
+
+	// set the webview mousepressedevent
+	Qt::KeyboardModifiers m_keyboardModifiers;
+	Qt::MouseButtons m_pressedButtons;
+	bool m_openInNewTab;
+	QUrl m_loadingUrl;
+};
+
 class WebView : public QWebView {
 	Q_OBJECT
 

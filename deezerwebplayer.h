@@ -35,6 +35,12 @@ public slots:
 	virtual void stop();
 
 	void playerHasPaused();
+
+private slots:
+	void log(const QVariant &v);
+
+signals:
+	void loginStatus(const QVariant &v);
 };
 
 #endif // DEEZERWEBPLAYER_H

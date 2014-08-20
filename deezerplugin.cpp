@@ -22,12 +22,21 @@ DeezerPlugin::DeezerPlugin()
 	// Dispatch replies: search for something, get artist info, get tracks from album, get track info
 	connect(nam, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
 		QNetworkRequest request = reply->request();
+		QString r = request.url().toDisplayString();
 		// qDebug() << request.url();
-		QByteArray ba = reply->readAll();
-		QXmlStreamReader xml(ba);
-		if (request.url().toDisplayString().startsWith("http://api.deezer.com/album")) {
+		if (r.startsWith("http://api.deezer.com/album")) {
+			QByteArray ba = reply->readAll();
+			QXmlStreamReader xml(ba);
 			this->extractAlbum(xml);
+		} else if (r.startsWith("http://api.deezer.com/user/me/artists")) {
+			QByteArray ba = reply->readAll();
+			qDebug() << ba;
+			//QXmlStreamReader xml(ba);
+			/// JSON?
+			//this->extractSynchronizedArtists(xml);
 		} else {
+			QByteArray ba = reply->readAll();
+			QXmlStreamReader xml(ba);
 			this->searchRequestFinished(xml);
 		}
 	});
@@ -97,6 +106,14 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 	connect(_artists, &QListView::doubleClicked, this, &DeezerPlugin::artistWasDoubleClicked);
 	connect(_albums, &QListView::doubleClicked, this, &DeezerPlugin::albumWasDoubleClicked);
 	connect(_tracks, &QListView::doubleClicked, this, &DeezerPlugin::trackWasDoubleClicked);
+}
+
+void DeezerPlugin::sync() const
+{
+	qDebug() << Q_FUNC_INFO;
+	qDebug() << "get remote library from Deezer";
+	//while ()
+	//NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists")));
 }
 
 bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
@@ -176,6 +193,12 @@ void DeezerPlugin::extractAlbum(QXmlStreamReader &xml)
 		}
 	}
 	emit aboutToProcessRemoteTracks(tracks);
+}
+
+void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
+{
+	qDebug() << Q_FUNC_INFO;
+	//qDebug() << xml.t;
 }
 
 void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
@@ -282,14 +305,13 @@ void DeezerPlugin::saveCredentials(bool enabled)
 	}
 }
 
+#include <QWebFrame>
+
 void DeezerPlugin::login()
 {
 	qDebug() << Q_FUNC_INFO;
 	WebView *webView = new WebView;
-
-	// HTML files from qrc:// does not work
-	//webView->loadUrl(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
-	webView->loadUrl(QUrl("http://bachelierm.free.fr/miamplayer/index.html"));
+	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://mbach.github.io/Miam-Player/deezer-light/channel.html&response_type=token&scope=manage_library,basic_access"));
 	webView->show();
 
 	_pages.append(webView);

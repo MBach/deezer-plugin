@@ -57,9 +57,12 @@ public:
 
 	virtual void setSearchDialog(AbstractSearchDialog *w);
 
+	virtual void sync() const;
+
 private slots:
 	void login();
 	void extractAlbum(QXmlStreamReader &xml);
+	void extractSynchronizedArtists(QXmlStreamReader &xml);
 	void searchRequestFinished(QXmlStreamReader &xml);
 	void saveCredentials(bool enabled);
 	void search(const QString &expr);

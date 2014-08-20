@@ -75,9 +75,7 @@ public slots:
 private slots:
 	//void authenticationRequired(QNetworkReply *reply, QAuthenticator *auth);
 	//void proxyAuthenticationRequired(const QNetworkProxy &proxy, QAuthenticator *auth);
-	//#ifndef QT_NO_OPENSSL
-	//	void sslErrors(QNetworkReply *reply, const QList<QSslError> &error);
-	//#endif
+	void ignoreSslErrors(QNetworkReply *reply, const QList<QSslError> &);
 };
 
 #endif // NETWORKACCESSMANAGER_H
