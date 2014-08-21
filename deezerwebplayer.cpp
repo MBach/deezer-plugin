@@ -11,9 +11,6 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 {
 	/// FIXME: how to play sound with invisible webView?
 	_webView->load(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
-
-
-
 	_webView->show();
 	_webView->page()->mainFrame()->addToJavaScriptWindowObject("dzWebPlayer", this);
 
@@ -26,20 +23,6 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 	// Init callback actions
 	connect(_webView->page()->mainFrame(), &QWebFrame::loadFinished, this, [=]() {
 		qDebug() << "loadFinished";
-
-		QString playerLoaded = "DZ.Event.subscribe('player_loaded', function(){" \
-			"console.log('check login...');" \
-			"DZ.getLoginStatus(function(response) {" \
-			"	dzWebPlayer.loginStatus(response);" \
-			"	if (response.authResponse) {" \
-			"		console.log('check login: logged');" \
-			"	} else { " \
-			"		console.log('check login: not logged');" \
-			"	}" \
-			"});" \
-			"});";
-		_webView->page()->mainFrame()->evaluateJavaScript(playerLoaded);
-
 
 		QString posChanged = "DZ.Event.subscribe('player_position', function(a){ dzWebPlayer.positionChanged(1000 * a[0], 1000 * a[1]); });";
 		_webView->page()->mainFrame()->evaluateJavaScript(posChanged);
@@ -55,21 +38,8 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 		QString trackEnded = "DZ.Event.subscribe('track_end', function(){ dzWebPlayer.trackHasEnded(); });";
 		_webView->page()->mainFrame()->evaluateJavaScript(trackEnded);
 
-		QString status = "DZ.getLoginStatus(function(response){ " \
-				"	console.log(response); "\
-				"	dzWebPlayer.loginStatus(response); "\
-				"});";
-		_webView->page()->mainFrame()->evaluateJavaScript(status);
-
-		QString ready = "DZ.ready(function(s){ dzWebPlayer.loginStatus(s); });";
-		//_webView->page()->mainFrame()->evaluateJavaScript(ready);
-
-		//NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists")));
-
 		this->setVolume(settings->volume());
 	});
-
-	connect(this, &DeezerWebPlayer::loginStatus, this, &DeezerWebPlayer::log);
 }
 
 void DeezerWebPlayer::pause()
@@ -123,9 +93,4 @@ void DeezerWebPlayer::playerHasPaused()
 	} else {
 		emit paused();
 	}
-}
-
-void DeezerWebPlayer::log(const QVariant &v)
-{
-	qDebug() << Q_FUNC_INFO << v;
 }

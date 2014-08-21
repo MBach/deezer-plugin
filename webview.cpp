@@ -42,6 +42,7 @@
 #include "cookiejar.h"
 #include "networkaccessmanager.h"
 #include "webview.h"
+#include "settings.h"
 
 #include <QtGui/QClipboard>
 #include <QtWidgets/QMenu>
@@ -50,16 +51,14 @@
 
 #include <QWebHitTestResult>
 
-#ifndef QT_NO_UITOOLS
-#include <QtUiTools/QUiLoader>
-#endif  //QT_NO_UITOOLS
-
 #include <QtCore/QDebug>
 #include <QtCore/QBuffer>
 
 #include <QNetworkReply>
-
+#include <QWebElement>
 #include <QWebSecurityOrigin>
+
+bool WebPage::_hasToken = false;
 
 WebPage::WebPage(QObject *parent)
 	: QWebPage(parent)
@@ -71,74 +70,26 @@ WebPage::WebPage(QObject *parent)
 	connect(this, SIGNAL(unsupportedContent(QNetworkReply*)), this, SLOT(handleUnsupportedContent(QNetworkReply*)));
 }
 
-bool WebPage::acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type)
+bool WebPage::acceptNavigationRequest(QWebFrame *, const QNetworkRequest &request, NavigationType)
 {
-	// ctrl open in new tab
-	// ctrl-shift open in new tab and select
-	// ctrl-alt open in new window
-	/*if (type == QWebPage::NavigationTypeLinkClicked
-		&& (m_keyboardModifiers & Qt::ControlModifier
-			|| m_pressedButtons == Qt::MidButton)) {
-		bool newWindow = (m_keyboardModifiers & Qt::AltModifier);
-		WebView *webView;
-		if (newWindow) {
-			BrowserApplication::instance()->newMainWindow();
-			BrowserMainWindow *newMainWindow = BrowserApplication::instance()->mainWindow();
-			webView = newMainWindow->currentTab();
-			newMainWindow->raise();
-			newMainWindow->activateWindow();
-			webView->setFocus();
-		} else {
-			bool selectNewTab = (m_keyboardModifiers & Qt::ShiftModifier);
-			webView = mainWindow()->tabWidget()->newTab(selectNewTab);
-		}
-		webView->load(request);
-		m_keyboardModifiers = Qt::NoModifier;
-		m_pressedButtons = Qt::NoButton;
-		return false;
-	}
-	if (frame == mainFrame()) {
-		m_loadingUrl = request.url();
-		emit loadingUrl(m_loadingUrl);
-	}
-	return QWebPage::acceptNavigationRequest(frame, request, type);*/
 	qDebug() << "acceptNavigationRequest" << request.url();
 	if (request.url().toString().contains("access_token=")) {
 		QString r = request.url().toString();
 		int i = r.indexOf("access_token=");
 		int j = r.mid(i + 13).indexOf('&');
 		QString t = r.mid(i + 13, j);
-		qDebug() << "token" << t;
-		if (!_tokenFound) {
-			emit token(t);
+		if (!_hasToken) {
+			emit tokenFound(t);
+			_hasToken = true;
 		}
 	}
 	return true;
 }
 
-QWebPage *WebPage::createWindow(QWebPage::WebWindowType type)
+QWebPage *WebPage::createWindow(QWebPage::WebWindowType)
 {
-	/*Q_UNUSED(type);
-	if (m_keyboardModifiers & Qt::ControlModifier || m_pressedButtons == Qt::MidButton)
-		m_openInNewTab = true;
-	if (m_openInNewTab) {
-		m_openInNewTab = false;
-		return mainWindow()->tabWidget()->newTab()->page();
-	}
-	BrowserApplication::instance()->newMainWindow();
-	BrowserMainWindow *mainWindow = BrowserApplication::instance()->mainWindow();
-	return mainWindow->currentTab()->page();*/
 	return new WebPage();
 }
-
-/*QObject *WebPage::createPlugin(const QString &classId, const QUrl &url, const QStringList &paramNames, const QStringList &paramValues)
-{
-	Q_UNUSED(url);
-	Q_UNUSED(paramNames);
-	Q_UNUSED(paramValues);
-	QUiLoader loader;
-	return loader.createWidget(classId, view());
-}*/
 
 void WebPage::handleUnsupportedContent(QNetworkReply *reply)
 {
@@ -192,6 +143,8 @@ void WebPage::handleUnsupportedContent(QNetworkReply *reply)
 	}
 }
 
+QString WebView::token = QString();
+
 WebView::WebView(QWidget* parent)
 	: QWebView(parent)
 	, m_progress(0)
@@ -203,6 +156,7 @@ WebView::WebView(QWidget* parent)
 	m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
 	m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("http://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
 	setPage(m_page);
+	connect(m_page, &WebPage::tokenFound, this, &WebView::tokenFound);
 	connect(page(), SIGNAL(statusBarMessage(QString)), SLOT(setStatusBarText(QString)));
 	connect(this, SIGNAL(loadProgress(int)), this, SLOT(setProgress(int)));
 	connect(this, SIGNAL(loadFinished(bool)), this, SLOT(loadFinished()));
@@ -255,9 +209,6 @@ void WebView::setStatusBarText(const QString &string)
 	m_statusBarText = string;
 }
 
-#include "settings.h"
-#include <QWebElement>
-
 QWebView* WebView::createWindow(QWebPage::WebWindowType)
 {
 	WebView *w = new WebView;
@@ -286,9 +237,6 @@ QWebView* WebView::createWindow(QWebPage::WebWindowType)
 		QWebElement password = we.findFirst("#login_password");
 		password.setAttribute("value", QByteArray::fromBase64(pba));
 		qDebug() << login.toPlainText();
-
-		QVariant v = page()->mainFrame()->evaluateJavaScript("DZ.getLoginStatus()");
-		qDebug() << v;
 	});
 	return w;
 }

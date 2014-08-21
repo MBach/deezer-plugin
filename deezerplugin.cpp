@@ -6,8 +6,11 @@
 #include "abstractsearchdialog.h"
 
 #include <QDesktopServices>
+#include <QDir>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QSqlDatabase>
+#include <QSqlQuery>
 #include <QWebView>
 
 #include <QtDebug>
@@ -31,14 +34,20 @@ DeezerPlugin::DeezerPlugin()
 		} else if (r.startsWith("http://api.deezer.com/user/me/artists")) {
 			QByteArray ba = reply->readAll();
 			qDebug() << ba;
-			//QXmlStreamReader xml(ba);
+			QXmlStreamReader xml(ba);
 			/// JSON?
-			//this->extractSynchronizedArtists(xml);
+			this->extractSynchronizedArtists(xml);
 		} else {
 			QByteArray ba = reply->readAll();
 			QXmlStreamReader xml(ba);
 			this->searchRequestFinished(xml);
 		}
+	});
+
+	connect(_webPlayer->webView(), &WebView::tokenFound, this, [=](const QString &token) {
+		qDebug() << "webplayer" << token;
+		_token = token;
+		this->sync();
 	});
 
 	QWebSettings *s = QWebSettings::globalSettings();
@@ -110,10 +119,12 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 
 void DeezerPlugin::sync() const
 {
-	qDebug() << Q_FUNC_INFO;
-	qDebug() << "get remote library from Deezer";
-	//while ()
-	//NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists")));
+	if (!_token.isEmpty()) {
+		qDebug() << Q_FUNC_INFO << _token;
+		qDebug() << "Ready to synchronize Library with Deezer (fetching remote only)";
+		// First, get checksum for Artists, Albums and Playlists
+		NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + _token)));
+	}
 }
 
 bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
@@ -198,7 +209,70 @@ void DeezerPlugin::extractAlbum(QXmlStreamReader &xml)
 void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 {
 	qDebug() << Q_FUNC_INFO;
-	//qDebug() << xml.t;
+	Settings *settings = Settings::getInstance();
+	bool needToSyncArtists = false;
+	QVariant checkSum = settings->value("DeezerPlugin/artists/checksum");
+	QString sum;
+	QStringList artists;
+	while(!xml.atEnd() && !xml.hasError()) {
+		QXmlStreamReader::TokenType token = xml.readNext();
+		// Parse start elements
+		if (token == QXmlStreamReader::StartElement) {
+			if (xml.name() == "artist") {
+				while (xml.name() != "name" && !xml.hasError()) {
+					xml.readNext();
+				}
+				artists << xml.readElementText();
+			}
+			if (xml.name() == "checksum") {
+				sum = xml.readElementText();
+				// Out of sync
+				if (checkSum.isNull() || checkSum.toString() != sum) {
+					needToSyncArtists = true;
+				}
+			}
+		}
+	}
+	if (needToSyncArtists) {
+		QSqlDatabase cacheDB = QSqlDatabase::addDatabase("QSQLITE");
+		QString path("%1/%2/%3");
+		path = path.arg(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation),
+						settings->organizationName(),
+						settings->applicationName());
+		QString dbPath = QDir::toNativeSeparators(path + "/deezer_cache.db");
+		QDir userDataPath(path);
+
+		// Init a new database file for settings
+		QFile db(dbPath);
+		if (!userDataPath.exists(path)) {
+			userDataPath.mkpath(path);
+		}
+		db.open(QIODevice::ReadWrite);
+		db.close();
+		cacheDB.setDatabaseName(dbPath);
+
+		if (cacheDB.open()) {
+			cacheDB.exec("DROP TABLE artists");
+			cacheDB.exec("CREATE TABLE artists (name varchar(255))");
+			cacheDB.exec("CREATE INDEX indexArtists ON artists (name)");
+			bool ok = true;
+			foreach (QString artist, artists) {
+				QSqlQuery insert(cacheDB);
+				insert.prepare("INSERT INTO artists(name) VALUES (?)");
+				insert.addBindValue(artist);
+				if (insert.exec()) {
+					qDebug() << "artist" << artist << "inserted";
+				} else {
+					ok = false;
+				}
+			}
+			cacheDB.close();
+			if (ok) {
+				qDebug() << "sum" << sum;
+				settings->setValue("DeezerPlugin/artists/checksum", sum);
+			}
+		}
+	}
 }
 
 void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
@@ -305,14 +379,11 @@ void DeezerPlugin::saveCredentials(bool enabled)
 	}
 }
 
-#include <QWebFrame>
-
 void DeezerPlugin::login()
 {
 	qDebug() << Q_FUNC_INFO;
 	WebView *webView = new WebView;
 	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://mbach.github.io/Miam-Player/deezer-light/channel.html&response_type=token&scope=manage_library,basic_access"));
 	webView->show();
-
 	_pages.append(webView);
 }

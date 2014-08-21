@@ -1,4 +1,4 @@
-QT      += widgets multimedia script webkit webkitwidgets
+QT      += multimedia sql webkit webkitwidgets widgets
 
 TARGET   = $$qtLibraryTarget(deezer-plugin)
 TEMPLATE = lib

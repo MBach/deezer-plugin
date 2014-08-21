@@ -32,8 +32,8 @@ private:
 	QListView *_albums;
 	QListView *_tracks;
 	QCheckBox *_checkBox;
-
 	DeezerWebPlayer *_webPlayer;
+	QString _token;
 
 protected:
 	bool eventFilter(QObject *obj, QEvent *event);

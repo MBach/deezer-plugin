@@ -52,22 +52,9 @@ class QNetworkReply;
 class QSslError;
 QT_END_NAMESPACE
 
-class WebPage : public QWebPage {
+class WebPage : public QWebPage
+{
 	Q_OBJECT
-
-signals:
-	void loadingUrl(const QUrl &url);
-
-public:
-	WebPage(QObject *parent = 0);
-
-protected:
-	bool acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type);
-	QWebPage *createWindow(QWebPage::WebWindowType type);
-	//QObject *createPlugin(const QString &classId, const QUrl &url, const QStringList &paramNames, const QStringList &paramValues);
-
-private slots:
-	void handleUnsupportedContent(QNetworkReply *reply);
 
 private:
 	friend class WebView;
@@ -77,10 +64,34 @@ private:
 	Qt::MouseButtons m_pressedButtons;
 	bool m_openInNewTab;
 	QUrl m_loadingUrl;
+
+	/// test
+	static bool _hasToken;
+
+public:
+	WebPage(QObject *parent = 0);
+
+protected:
+	bool acceptNavigationRequest(QWebFrame *frame, const QNetworkRequest &request, NavigationType type);
+	QWebPage *createWindow(QWebPage::WebWindowType type);
+
+private slots:
+	void handleUnsupportedContent(QNetworkReply *reply);
+
+signals:
+	void loadingUrl(const QUrl &url);
+	void tokenFound(const QString &t);
 };
 
-class WebView : public QWebView {
+class WebView : public QWebView
+{
 	Q_OBJECT
+
+private:
+	QString m_statusBarText;
+	QUrl m_initialUrl;
+	int m_progress;
+	WebPage *m_page;
 
 public:
 	WebView(QWidget *parent = 0);
@@ -90,6 +101,7 @@ public:
 
 	QString lastStatusBarText() const;
 	inline int progress() const { return m_progress; }
+	static QString token;
 
 protected:
 	QWebView* createWindow(QWebPage::WebWindowType);
@@ -100,11 +112,8 @@ private slots:
 	void setStatusBarText(const QString &string);
 	void openLinkInNewTab();
 
-private:
-	QString m_statusBarText;
-	QUrl m_initialUrl;
-	int m_progress;
-	QWebPage *m_page;
+signals:
+	void tokenFound(const QString &t);
 };
 
 #endif
