@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>500</width>
-    <height>270</height>
+    <height>463</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
    <item>
     <widget class="QGroupBox" name="deezerGroupBox">
      <property name="title">
-      <string notr="true">Deezer</string>
+      <string notr="true">Account</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
@@ -107,6 +107,91 @@
          <string>Important notice: from this developement stage, password is NOT encrypted on your hard drive. Use this functionality at your own risk. The password is stored only on your computer but it is poorly encripted. If you are the only one to use this computer well it's perfectly fine! I do not collect any information about your account.</string>
         </property>
         <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="syncGroupBox">
+     <property name="title">
+      <string>Manage items to synchronize</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QCheckBox" name="syncPlaylistsCheckbox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Playlists</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="syncArtistsCheckbox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Artists</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <property name="leftMargin">
+         <number>20</number>
+        </property>
+        <item>
+         <widget class="QCheckBox" name="syncArtistsAlbumsCheckbox">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Albums</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="syncArtistsEPCheckbox">
+          <property name="text">
+           <string>EP</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="syncArtistsSinglesCheckbox">
+          <property name="text">
+           <string>Singles</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="syncAlbumsCheckbox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Albums</string>
+        </property>
+        <property name="checked">
          <bool>true</bool>
         </property>
        </widget>

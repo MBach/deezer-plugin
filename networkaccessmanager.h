@@ -57,6 +57,8 @@ public:
 
 	virtual QNetworkReply* createRequest ( Operation op, const QNetworkRequest & req, QIODevice * outgoingData = 0 );
 
+	//QNetworkReply *get(const QNetworkRequest &request);
+
 private:
 	QList<QString> sslTrustedHostList;
 	qint64 requestFinishedCount;
@@ -67,6 +69,8 @@ private:
 
 	/** The unique instance of this class. */
 	static NetworkAccessManager *networkAccessManager;
+
+	int _pendingRequests;
 
 public slots:
 	void loadSettings();

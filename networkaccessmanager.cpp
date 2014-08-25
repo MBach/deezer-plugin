@@ -66,11 +66,11 @@ NetworkAccessManager* NetworkAccessManager::networkAccessManager = NULL;
 NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	: QNetworkAccessManager(parent),
 	requestFinishedCount(0), requestFinishedFromCacheCount(0), requestFinishedPipelinedCount(0),
-	requestFinishedSecureCount(0), requestFinishedDownloadBufferCount(0)
+	requestFinishedSecureCount(0), requestFinishedDownloadBufferCount(0), _pendingRequests(0)
 {
 	//connect(this, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)), SLOT(authenticationRequired(QNetworkReply*,QAuthenticator*)));
 	//connect(this, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)), SLOT(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)));
-	connect(this, &QNetworkAccessManager::finished, this, &NetworkAccessManager::requestFinished);
+	//connect(this, &QNetworkAccessManager::finished, this, &NetworkAccessManager::requestFinished);
 
 	//connect(this, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)), SLOT(sslErrors(QNetworkReply*,QList<QSslError>)));
 	connect(this, &QNetworkAccessManager::sslErrors, this, &NetworkAccessManager::ignoreSslErrors);
@@ -91,18 +91,38 @@ NetworkAccessManager* NetworkAccessManager::getInstance()
 	return networkAccessManager;
 }
 
+#include <QThread>
+
 QNetworkReply* NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & req, QIODevice * outgoingData)
 {
+	/*while (_pendingRequests > 10) {
+		qDebug() << "waiting for 1 second";
+		this->thread()->sleep(1);
+	}*/
 	QNetworkRequest request = req; // copy so we can modify
 	// this is a temporary hack until we properly use the pipelining flags from QtWebkit
 	// pipeline everything! :)
 	request.setAttribute(QNetworkRequest::HttpPipeliningAllowedAttribute, true);
-	return QNetworkAccessManager::createRequest(op, request, outgoingData);
+	QNetworkReply *r = QNetworkAccessManager::createRequest(op, request, outgoingData);
+	//_pendingRequests++;
+	return r;
 }
 
-void NetworkAccessManager::requestFinished(QNetworkReply *reply)
+/*QNetworkReply* NetworkAccessManager::get(const QNetworkRequest &request)
 {
-	requestFinishedCount++;
+	while (_pendingRequests > 5) {
+		qDebug() << "waiting for 1 second";
+		this->thread()->sleep(1);
+	}
+	_pendingRequests++;
+	return QNetworkAccessManager::get(request);
+}*/
+
+void NetworkAccessManager::requestFinished(QNetworkReply *)
+{
+	_pendingRequests--;
+	//qDebug() << Q_FUNC_INFO << _pendingRequests;
+	/*requestFinishedCount++;
 
 	if (reply->attribute(QNetworkRequest::SourceIsFromCacheAttribute).toBool() == true)
 		requestFinishedFromCacheCount++;
@@ -117,16 +137,16 @@ void NetworkAccessManager::requestFinished(QNetworkReply *reply)
 		requestFinishedDownloadBufferCount++;
 
 	if (requestFinishedCount % 10)
-		return;
+		return;*/
 
-#ifdef QT_DEBUG
-	double pctCached = (double(requestFinishedFromCacheCount) * 100.0/ double(requestFinishedCount));
-	double pctPipelined = (double(requestFinishedPipelinedCount) * 100.0/ double(requestFinishedCount));
-	double pctSecure = (double(requestFinishedSecureCount) * 100.0/ double(requestFinishedCount));
-	double pctDownloadBuffer = (double(requestFinishedDownloadBufferCount) * 100.0/ double(requestFinishedCount));
 
-	qDebug("STATS [%lli requests total] [%3.2f%% from cache] [%3.2f%% pipelined] [%3.2f%% SSL/TLS] [%3.2f%% Zerocopy]", requestFinishedCount, pctCached, pctPipelined, pctSecure, pctDownloadBuffer);
-#endif
+//#ifdef QT_DEBUG
+//	double pctCached = (double(requestFinishedFromCacheCount) * 100.0/ double(requestFinishedCount));
+//	double pctPipelined = (double(requestFinishedPipelinedCount) * 100.0/ double(requestFinishedCount));
+//	double pctSecure = (double(requestFinishedSecureCount) * 100.0/ double(requestFinishedCount));
+//	double pctDownloadBuffer = (double(requestFinishedDownloadBufferCount) * 100.0/ double(requestFinishedCount));
+//	qDebug("STATS [%lli requests total] [%3.2f%% from cache] [%3.2f%% pipelined] [%3.2f%% SSL/TLS] [%3.2f%% Zerocopy]", requestFinishedCount, pctCached, pctPipelined, pctSecure, pctDownloadBuffer);
+//#endif
 }
 
 void NetworkAccessManager::loadSettings()

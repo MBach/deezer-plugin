@@ -33,7 +33,8 @@ HEADERS += model/remotetrack.h \
     settings.h \
     webview.h \
     remotemediaplayer.h \
-    remotemediaplayerplugin.h
+    remotemediaplayerplugin.h \
+    deezerdatabase.h
 
 SOURCES += model/remotetrack.cpp \
     autosaver.cpp \
@@ -41,7 +42,8 @@ SOURCES += model/remotetrack.cpp \
     deezerplugin.cpp \
     deezerwebplayer.cpp \
     networkaccessmanager.cpp \
-    webview.cpp
+    webview.cpp \
+    deezerdatabase.cpp
 
 RESOURCES += \
     resources.qrc

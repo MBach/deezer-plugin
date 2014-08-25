@@ -22,33 +22,10 @@ DeezerPlugin::DeezerPlugin()
 	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
 	nam->setCookieJar(new CookieJar);
 
-	// Dispatch replies: search for something, get artist info, get tracks from album, get track info
-	connect(nam, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
-		QNetworkRequest request = reply->request();
-		QString r = request.url().toDisplayString();
-		// qDebug() << request.url();
-		if (r.startsWith("http://api.deezer.com/album")) {
-			QByteArray ba = reply->readAll();
-			QXmlStreamReader xml(ba);
-			this->extractAlbum(xml);
-		} else if (r.startsWith("http://api.deezer.com/user/me/artists")) {
-			QByteArray ba = reply->readAll();
-			qDebug() << ba;
-			QXmlStreamReader xml(ba);
-			/// JSON?
-			this->extractSynchronizedArtists(xml);
-		} else {
-			QByteArray ba = reply->readAll();
-			QXmlStreamReader xml(ba);
-			this->searchRequestFinished(xml);
-		}
-	});
+	// Dispatch replies: search for something, get artist info, get tracks from album, get track info, fetch, synchronize...
+	connect(nam, &QNetworkAccessManager::finished, this, &DeezerPlugin::dispatchReply);
 
-	connect(_webPlayer->webView(), &WebView::tokenFound, this, [=](const QString &token) {
-		qDebug() << "webplayer" << token;
-		_token = token;
-		this->sync();
-	});
+	connect(_webPlayer->webView(), &WebView::tokenFound, this, &DeezerPlugin::sync);
 
 	QWebSettings *s = QWebSettings::globalSettings();
 	/// XXX
@@ -62,6 +39,12 @@ DeezerPlugin::DeezerPlugin()
 	s->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, true);
 	s->setAttribute(QWebSettings::LocalContentCanAccessFileUrls, true);
 	s->setThirdPartyCookiePolicy(QWebSettings::AlwaysAllowThirdPartyCookies);
+
+	Settings *settings = Settings::getInstance();
+	if (settings->value("DeezerPlugin/syncOptions").isNull()) {
+		QStringList l = QStringList() << "album" << "ep" << "single";
+		settings->setValue("DeezerPlugin/syncOptions", l);
+	}
 }
 
 DeezerPlugin::~DeezerPlugin()
@@ -77,10 +60,10 @@ DeezerPlugin::~DeezerPlugin()
 
 QWidget* DeezerPlugin::configPage()
 {
-	QWidget *widget = new QWidget();
+	Settings *settings = Settings::getInstance();
+	QWidget *widget = new QWidget;
 	_config.setupUi(widget);
 
-	Settings *settings = Settings::getInstance();
 	bool b = settings->value("DeezerPlugin/save").toBool();
 	_config.saveCredentialsCheckBox->setChecked(b);
 	if (b) {
@@ -90,10 +73,28 @@ QWidget* DeezerPlugin::configPage()
 		_config.passwordLineEdit->setText(QByteArray::fromBase64(pba));
 	}
 
+	// Load settings
+	_config.syncArtistsEPCheckbox->setChecked(settings->value("DeezerPlugin/syncArtistsEPCheckbox", true).toBool());
+	_config.syncArtistsSinglesCheckbox->setChecked(settings->value("DeezerPlugin/syncArtistsSinglesCheckbox", false).toBool());
+
+	// Connect elements from UI
 	connect(_config.saveCredentialsCheckBox, &QCheckBox::toggled, this, &DeezerPlugin::saveCredentials);
 	connect(_config.openConnectPopup, &QPushButton::clicked, this, &DeezerPlugin::login);
-	_config.logo->installEventFilter(this);
+	connect(_config.syncArtistsEPCheckbox, &QCheckBox::toggled, this, [=](bool b) {
+		QStringList l = settings->value("DeezerPlugin/syncOptions").toStringList();
+		b ? l.append("ep") : l.removeAll("ep");
+		settings->setValue("DeezerPlugin/syncOptions", l);
+		settings->setValue("DeezerPlugin/syncArtistsEPCheckbox", b);
+	});
+	connect(_config.syncArtistsSinglesCheckbox, &QCheckBox::toggled, this, [=](bool b) {
+		QStringList l = settings->value("DeezerPlugin/syncOptions").toStringList();
+		b ? l.append("single") : l.removeAll("single");
+		settings->setValue("DeezerPlugin/syncOptions", l);
+		settings->setValue("DeezerPlugin/syncArtistsSinglesCheckbox", b);
+	});
 
+	// Detect click mouse event to open Deezer in browser
+	_config.logo->installEventFilter(this);
 	return widget;
 }
 
@@ -117,16 +118,18 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 	connect(_tracks, &QListView::doubleClicked, this, &DeezerPlugin::trackWasDoubleClicked);
 }
 
-void DeezerPlugin::sync() const
+void DeezerPlugin::sync(const QString &token) const
 {
-	if (!_token.isEmpty()) {
-		qDebug() << Q_FUNC_INFO << _token;
+	if (!token.isEmpty()) {
+		qDebug() << Q_FUNC_INFO << token;
 		qDebug() << "Ready to synchronize Library with Deezer (fetching remote only)";
 		// First, get checksum for Artists, Albums and Playlists
-		NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + _token)));
+		/// TODO: playlists, albums (followers?)
+		NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + token)));
 	}
 }
 
+/** Redefined to open Deezer's home page. */
 bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 {
 	if (event->type() == QEvent::MouseButtonPress) {
@@ -137,73 +140,116 @@ bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 	}
 }
 
-void DeezerPlugin::extractAlbum(QXmlStreamReader &xml)
+QString DeezerPlugin::extract(QXmlStreamReader &xml, const QString &criterion)
 {
-	std::list<RemoteTrack> tracks;
+	while (xml.name() != criterion && !xml.hasError()) {
+		xml.readNext();
+	}
+	return xml.readElementText();
+}
+
+void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
+{
+	qDebug() << Q_FUNC_INFO;
+
 	bool artistFound = false;
 	bool albumFound = false;
+	bool albumIdFound = false;
+	QString id;
 	QString artist;
 	QString album;
 	QString year;
-	int trackNumber = 1;
-	static QIcon icon(":/icon");
+	RemoteTrack *track = new RemoteTrack;
 	while (!xml.atEnd() && !xml.hasError()) {
 
 		QXmlStreamReader::TokenType token = xml.readNext();
 
 		// Parse start elements
 		if (token == QXmlStreamReader::StartElement) {
-			RemoteTrack track;
+
+			if (!albumIdFound) {
+				id = this->extract(xml, "id");
+				albumIdFound = true;
+				qDebug() << "id" << id;
+			}
 			if (xml.name() == "title") {
 				album = xml.readElementText();
 				albumFound = true;
 			}
 			if (xml.name() == "artist") {
-				while (xml.name() != "name" && !xml.hasError()) {
-					xml.readNext();
-				}
-				artist = xml.readElementText();
+				artist = this->extract(xml, "name");
 				artistFound = true;
 			}
 			if (xml.name() == "release_date") {
 				year = xml.readElementText();
 			}
+			if (artistFound && albumFound) {
+				track->setId(id);
+				track->setAlbum(album);
+				track->setArtist(artist);
+				track->setYear(year);
+				_cache.insert(id, track);
 
-			if (artistFound && albumFound && xml.name() == "track") {
-				while (xml.name() != "id" && !xml.hasError()) {
-					xml.readNext();
+				QNetworkReply *nextReply = NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/album/" + id + "/tracks/?output=xml")));
+				if (_repliesWhichInteractWithUi.contains(reply)) {
+					Reply forward = _repliesWhichInteractWithUi.take(reply);
+					delete reply;
+					_repliesWhichInteractWithUi.insert(nextReply, forward);
 				}
-				track.setId(xml.readElementText());
-				while (xml.name() != "title" && !xml.hasError()) {
-					xml.readNext();
-				}
-				track.setTitle(xml.readElementText());
-				while (xml.name() != "link" && !xml.hasError()) {
-					xml.readNext();
-				}
-				track.setUrl(xml.readElementText());
-				while (xml.name() != "duration" && !xml.hasError()) {
-					xml.readNext();
-				}
-				track.setLength(xml.readElementText());
-				while (xml.name() != "rank" && !xml.hasError()) {
-					xml.readNext();
-				}
-				int r = xml.readElementText().toInt();
-				r = round((double)r / 166666);
-				track.setRating(r);
-
-				track.setArtist(artist);
-				track.setAlbum(album);
-				track.setIcon(icon);
-				/// FIXME. Example, Broken by Nine Inch Nails -> # are (1, ..., 6, 98, 99)
-				track.setTrackNumber(QString::number(trackNumber++));
-				track.setYear(year.left(4));
-				tracks.push_back(std::move(track));
+				break;
 			}
 		}
 	}
-	emit aboutToProcessRemoteTracks(tracks);
+}
+
+void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, QXmlStreamReader &xml)
+{
+	qDebug() << Q_FUNC_INFO;
+	QList<RemoteTrack*> albums;
+	Settings *settings = Settings::getInstance();
+	while(!xml.atEnd() && !xml.hasError()) {
+		QXmlStreamReader::TokenType token = xml.readNext();
+		if (token == QXmlStreamReader::StartElement) {
+			if (xml.name() == "album") {
+				RemoteTrack *album = new RemoteTrack;
+				QString record_type;
+				album->setId(this->extract(xml, "id"));
+				album->setTitle(this->extract(xml, "title"));
+				/// TODO
+				this->extract(xml, "cover");
+				//album.setIcon(xml.readElementText());
+				record_type = this->extract(xml, "record_type");
+				if (settings->value("DeezerPlugin/syncOptions").toStringList().contains(record_type)) {
+					albums.append(album);
+				}
+			}
+		}
+	}
+	if (_db.open()) {
+		for (int i = 0; i < albums.size(); i++) {
+			RemoteTrack *album = albums.at(i);
+			QSqlQuery insert(_db);
+			insert.prepare("INSERT INTO albums(id, name, cover) VALUES (?, ?, ?)");
+			insert.addBindValue(album->id());
+			insert.addBindValue(album->title());
+			//https://api.deezer.com/album/<id>/image?size=big
+			insert.addBindValue("todo");
+			_cache.insert(album->id(), album);
+
+			// Finally, extract track list
+			/// XXX: too much requests?
+			if (insert.exec()) {
+				QNetworkReply *nextReply = NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/album/" + album->id() + "/tracks/?output=xml")));
+				if (_repliesWhichInteractWithUi.contains(reply)) {
+					Reply forward =_repliesWhichInteractWithUi.take(reply);
+					delete reply;
+					qDebug() << "forwarding" << forward << nextReply;
+					_repliesWhichInteractWithUi.insert(nextReply, forward);
+				}
+			}
+		}
+		_db.close();
+	}
 }
 
 void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
@@ -213,16 +259,15 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 	bool needToSyncArtists = false;
 	QVariant checkSum = settings->value("DeezerPlugin/artists/checksum");
 	QString sum;
-	QStringList artists;
+	QList<RemoteTrack> artists;
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
-		// Parse start elements
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "artist") {
-				while (xml.name() != "name" && !xml.hasError()) {
-					xml.readNext();
-				}
-				artists << xml.readElementText();
+				RemoteTrack artist;
+				artist.setId(this->extract(xml, "id"));
+				artist.setArtist(this->extract(xml, "name"));
+				artists.append(artist);
 			}
 			if (xml.name() == "checksum") {
 				sum = xml.readElementText();
@@ -233,87 +278,79 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 			}
 		}
 	}
-	if (needToSyncArtists) {
-		QSqlDatabase cacheDB = QSqlDatabase::addDatabase("QSQLITE");
-		QString path("%1/%2/%3");
-		path = path.arg(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation),
-						settings->organizationName(),
-						settings->applicationName());
-		QString dbPath = QDir::toNativeSeparators(path + "/deezer_cache.db");
-		QDir userDataPath(path);
-
-		// Init a new database file for settings
-		QFile db(dbPath);
-		if (!userDataPath.exists(path)) {
-			userDataPath.mkpath(path);
-		}
-		db.open(QIODevice::ReadWrite);
-		db.close();
-		cacheDB.setDatabaseName(dbPath);
-
-		if (cacheDB.open()) {
-			cacheDB.exec("DROP TABLE artists");
-			cacheDB.exec("CREATE TABLE artists (name varchar(255))");
-			cacheDB.exec("CREATE INDEX indexArtists ON artists (name)");
+	if (needToSyncArtists || _db.isEmpty()) {
+		if (_db.open()) {
+			_db.exec("TRUNCATE TABLE artists");
 			bool ok = true;
-			foreach (QString artist, artists) {
-				QSqlQuery insert(cacheDB);
-				insert.prepare("INSERT INTO artists(name) VALUES (?)");
-				insert.addBindValue(artist);
+			for (int i = 0; i < artists.size(); i++) {
+				RemoteTrack artist = artists.at(i);
+				QSqlQuery insert(_db);
+				insert.prepare("INSERT INTO artists(id, name) VALUES (?, ?)");
+				insert.addBindValue(artist.id());
+				insert.addBindValue(artist.artist());
 				if (insert.exec()) {
-					qDebug() << "artist" << artist << "inserted";
+					QNetworkRequest r(QUrl("http://api.deezer.com/artist/" + artist.id() + "/albums?output=xml"));
+					QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
+					_repliesWhichInteractWithUi.insert(reply, RPL_UpdateCacheDatabase);
 				} else {
 					ok = false;
 				}
 			}
-			cacheDB.close();
+			_db.close();
 			if (ok) {
 				qDebug() << "sum" << sum;
 				settings->setValue("DeezerPlugin/artists/checksum", sum);
 			}
 		}
+	} else {
+		qDebug() << "artists are synchronized!";
 	}
 }
 
-void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
+void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml)
 {
-	QList<QStandardItem*> results;
-
-	while(!xml.atEnd() && !xml.hasError()) {
-
-		QXmlStreamReader::TokenType token = xml.readNext();
-
-		// Parse start elements
-		if (token == QXmlStreamReader::StartElement) {
-			if (xml.name() == "album") {
-				QString element;
-				QString id;
-				while (xml.name() != "id" && !xml.hasError()) {
-					xml.readNext();
-				}
-				id = xml.readElementText();
-				while (xml.name() != "title" && !xml.hasError()) {
-					xml.readNext();
-				}
-				element = xml.readElementText();
-				while (xml.name() != "artist" && !xml.hasError()) {
-					xml.readNext();
-				}
-				while (xml.name() != "name" && !xml.hasError()) {
-					xml.readNext();
-				}
-				if (!element.isEmpty()) {
-					element += " – " + xml.readElementText();
-					qDebug() << "deezer-album" << element;
-					QStandardItem *item = new QStandardItem(QIcon(":/icon"), element);
-					item->setData(_checkBox->text(), AbstractSearchDialog::DT_Origin);
-					item->setData(id, AbstractSearchDialog::DT_Identifier);
-					results.append(item);
+	qDebug() << Q_FUNC_INFO << reply;
+	static QIcon icon(":/icon");
+	std::list<RemoteTrack> tracks;
+	if (_cache.contains(albumID)) {
+		RemoteTrack *templateTrack = _cache[albumID];
+		qDebug() << albumID << templateTrack->artist() << templateTrack->album();
+		while (!xml.atEnd() && !xml.hasError()) {
+			QXmlStreamReader::TokenType token = xml.readNext();
+			if (token == QXmlStreamReader::StartElement) {
+				if (xml.name() == "track") {
+					RemoteTrack track;
+					track.setId(this->extract(xml, "id"));
+					track.setTitle(this->extract(xml, "title"));
+					track.setUrl(this->extract(xml, "link"));
+					track.setLength(this->extract(xml, "duration"));
+					track.setTrackNumber(this->extract(xml, "track_position"));
+					track.setDisc(this->extract(xml, "disk_number"));
+					int r = this->extract(xml, "rank").toInt();
+					r = round((double)r / 166666);
+					track.setRating(r);
+					track.setArtist(templateTrack->artist());
+					track.setAlbum(templateTrack->album());
+					track.setIcon(icon);
+					track.setYear(templateTrack->year().left(4));
+					tracks.push_back(std::move(track));
 				}
 			}
 		}
+		if (_repliesWhichInteractWithUi.contains(reply)) {
+			Reply value = _repliesWhichInteractWithUi.value(reply);
+			switch (value) {
+			case RPL_SendToCurrentPlaylist:
+				emit aboutToProcessRemoteTracks(tracks);
+				break;
+			case RPL_UpdateCacheDatabase:
+				this->updateCacheDatabase(tracks);
+				break;
+			}
+			_repliesWhichInteractWithUi.remove(reply);
+			delete reply;
+		}
 	}
-	emit searchComplete(AbstractSearchDialog::Album, results);
 }
 
 void DeezerPlugin::artistWasDoubleClicked(const QModelIndex &index)
@@ -334,33 +371,59 @@ void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
 
 		// Get album info: at least all the tracks
 		QString idAlbum = item->data(AbstractSearchDialog::DT_Identifier).toString();
-
-		NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/album/" + idAlbum + "?output=xml")));
+		QNetworkRequest r(QUrl("http://api.deezer.com/album/" + idAlbum + "?output=xml"));
+		QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
+		qDebug() << "reply?" << reply;
+		_repliesWhichInteractWithUi.insert(reply, RPL_SendToCurrentPlaylist);
 	}
 }
 
-void DeezerPlugin::trackWasDoubleClicked(const QModelIndex &index)
+void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 {
-	QStandardItemModel *m = qobject_cast<QStandardItemModel*>(_tracks->model());
-	if (m->itemFromIndex(index)->data(AbstractSearchDialog::DT_Origin) == _checkBox->text()) {
-		qDebug() << Q_FUNC_INFO << "not implemented";
-		qDebug() << m->itemFromIndex(index)->text();
+	qDebug() << Q_FUNC_INFO << reply;
+	QNetworkRequest request = reply->request();
+	QString r = request.url().toDisplayString();
+	QXmlStreamReader xml(reply->readAll());
+	/// WARNING: used by sync() and search() -> album/<id>/tracklist
+	QRegularExpression reg("http://api.deezer.com/album/[0-9]+/tracks");
+	if (r.startsWith("http://api.deezer.com/album/") && !r.contains(reg)) {
+		qDebug() << r;
+		this->extractAlbum(reply, xml);
+	} else if (r.startsWith("http://api.deezer.com/album/") && r.contains(reg)) {
+		int slash = r.indexOf("/", 28);
+		this->extractTrackListFromAlbum(reply, r.mid(28, slash - 28), xml);
+	} else if (r.startsWith("http://api.deezer.com/user/me/artists")) {
+		this->extractSynchronizedArtists(xml);
+	/// TODO !?
+	//} else if (r.startsWith("http://api.deezer.com/user/me/albums")) {
+	//} else if (r.startsWith("http://api.deezer.com/user/me/playlists")) {
+	//} else if (r.startsWith("http://api.deezer.com/user/me/flow")) {
+	//} else if (r.startsWith("http://api.deezer.com/user/me/following")) {
+	//} else if (r.startsWith("http://api.deezer.com/user/me/followers")) {
+	//} else if (r.startsWith("http://api.deezer.com/user/me/radio")) {
+	//} else if (r.startsWith("http://api.deezer.com/user/me/tracks")) {
+	} else if (r.startsWith("http://api.deezer.com/artist/")) {
+		this->extractAlbumListFromArtist(reply, xml);
+	} else if (r.startsWith("http://api.deezer.com/search/artist/")) {
+		/// TODO
+	} else if (r.startsWith("http://api.deezer.com/search/album/")) {
+		this->searchRequestFinished(xml);
+	} else if (r.startsWith("http://api.deezer.com/search/track/")) {
+		/// TODO
+	} else if (r.startsWith("http://api.deezer.com/")) {
+		qDebug() << "unknown search request" << r;
+	} else {
+		qDebug() << "unknown reply" << reply->error() << reply->errorString();
 	}
 }
 
-void DeezerPlugin::search(const QString &expr)
+void DeezerPlugin::login()
 {
-	if (!_checkBox->isChecked()) {
-		return;
-	}
-
-	// Do not spam remote location with single character request
-	if (expr.length() <= 1) {
-		return;
-	}
-
-	/// XXX: escape this
-	NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/search/album?output=xml&limit=5&q=" + expr)));
+	qDebug() << Q_FUNC_INFO;
+	WebView *webView = new WebView;
+	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://mbach.github.io/Miam-Player/deezer-light/channel.html&response_type=token&scope=manage_library,basic_access"));
+	webView->show();
+	_pages.append(webView);
 }
 
 void DeezerPlugin::saveCredentials(bool enabled)
@@ -379,11 +442,79 @@ void DeezerPlugin::saveCredentials(bool enabled)
 	}
 }
 
-void DeezerPlugin::login()
+void DeezerPlugin::search(const QString &expr)
+{
+	if (!_checkBox->isChecked()) {
+		return;
+	}
+
+	// Do not spam remote location with single character request
+	if (expr.length() <= 1) {
+		return;
+	}
+
+	/// XXX: escape this
+	// NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/search/artist/?output=xml&limit=5&q=" + expr)));
+	NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/search/album/?output=xml&limit=5&q=" + expr)));
+	// NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/search/track/?output=xml&limit=5&q=" + expr)));
+}
+
+void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
+{
+	QList<QStandardItem*> results;
+
+	while(!xml.atEnd() && !xml.hasError()) {
+
+		QXmlStreamReader::TokenType token = xml.readNext();
+		if (token == QXmlStreamReader::StartElement) {
+			if (xml.name() == "album") {
+				QString id = this->extract(xml, "id");
+				QString element = this->extract(xml, "title");
+				while (xml.name() != "artist" && !xml.hasError()) {
+					xml.readNext();
+				}
+				while (xml.name() != "name" && !xml.hasError()) {
+					xml.readNext();
+				}
+				if (!element.isEmpty()) {
+					element += " – " + xml.readElementText();
+					qDebug() << "deezer-album" << element;
+					QStandardItem *item = new QStandardItem(QIcon(":/icon"), element);
+					item->setData(_checkBox->text(), AbstractSearchDialog::DT_Origin);
+					item->setData(id, AbstractSearchDialog::DT_Identifier);
+					results.append(item);
+				}
+			}
+		}
+	}
+	emit searchComplete(AbstractSearchDialog::Album, results);
+}
+
+void DeezerPlugin::updateCacheDatabase(const std::list<RemoteTrack> &tracks)
 {
 	qDebug() << Q_FUNC_INFO;
-	WebView *webView = new WebView;
-	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://mbach.github.io/Miam-Player/deezer-light/channel.html&response_type=token&scope=manage_library,basic_access"));
-	webView->show();
-	_pages.append(webView);
+	if (!_db.isOpen()) {
+		_db.open();
+	}
+
+	for (std::list<RemoteTrack>::const_iterator it = tracks.cbegin(); it != tracks.cend(); ++it) {
+		RemoteTrack track = *it;
+		QSqlQuery insert(_db);
+		insert.prepare("INSERT INTO tracks (id, name) VALUES (?, ?)");
+		insert.addBindValue(track.id());
+		insert.addBindValue(track.title());
+		if (insert.exec()) {
+			qDebug() << track.title() << "has been added to local deezer cache";
+		}
+	}
+	_db.close();
+}
+
+void DeezerPlugin::trackWasDoubleClicked(const QModelIndex &index)
+{
+	QStandardItemModel *m = qobject_cast<QStandardItemModel*>(_tracks->model());
+	if (m->itemFromIndex(index)->data(AbstractSearchDialog::DT_Origin) == _checkBox->text()) {
+		qDebug() << Q_FUNC_INFO << "not implemented";
+		qDebug() << m->itemFromIndex(index)->text();
+	}
 }
