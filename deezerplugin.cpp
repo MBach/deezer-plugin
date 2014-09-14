@@ -135,6 +135,9 @@ bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 	if (event->type() == QEvent::MouseButtonPress) {
 		QDesktopServices::openUrl(QUrl("http://www.deezer.com"));
 		return true;
+	} else if (event->type() == QEvent::Show) {
+		qDebug() << "show event";
+		return true;
 	} else {
 		return QObject::eventFilter(obj, event);
 	}
@@ -421,7 +424,8 @@ void DeezerPlugin::login()
 {
 	qDebug() << Q_FUNC_INFO;
 	WebView *webView = new WebView;
-	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://mbach.github.io/Miam-Player/deezer-light/channel.html&response_type=token&scope=manage_library,basic_access"));
+	webView->installEventFilter(this);
+	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://miam-player.org/deezer-micro/channel.html&response_type=token&scope=manage_library,basic_access"));
 	webView->show();
 	_pages.append(webView);
 }

@@ -10,7 +10,7 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 	RemoteMediaPlayer(parent), _webView(new WebView),  _deezerPlugin(parent), _stopButtonWasTriggered(false)
 {
 	/// FIXME: how to play sound with invisible webView?
-	_webView->load(QUrl("http://mbach.github.io/Miam-Player/deezer-light/index.html"));
+	_webView->load(QUrl("http://miam-player.org/deezer-micro/index.html"));
 	_webView->show();
 	_webView->page()->mainFrame()->addToJavaScriptWindowObject("dzWebPlayer", this);
 
@@ -39,6 +39,11 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 		_webView->page()->mainFrame()->evaluateJavaScript(trackEnded);
 
 		this->setVolume(settings->volume());
+
+		/// XXX: auto-hiding but must be changed later!
+		if (_webView->isVisible()) {
+			_webView->close();
+		}
 	});
 }
 
