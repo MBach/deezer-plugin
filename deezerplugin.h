@@ -45,24 +45,34 @@ private:
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
 
 public:
+	/** Default constructor. */
 	explicit DeezerPlugin();
 
+	/** Default destructor. */
 	virtual ~DeezerPlugin();
 
+	/** Load and return user interface to manipulate this plugin. */
 	virtual QWidget* configPage();
 
+	/** This plugin can be configurable in options. */
 	inline virtual bool isConfigurable() const { return true; }
 
+	/** Name displayed in options. */
 	inline virtual QString name() const { return "Deezer-Plugin"; }
 
+	/** Every RemoteMediaPlayerPlugin has to return an implementation of RemoteMediaPlayer class. */
 	inline virtual RemoteMediaPlayer * player() const { return _webPlayer;	}
 
+	/** This plugin has no independant view. */
 	inline virtual QWidget* providesView() { return NULL; }
 
+	/** Release displayed in options. */
 	inline virtual QString version() const { return "0.2"; }
 
+	/** Redefined. */
 	virtual void setSearchDialog(AbstractSearchDialog *w);
 
+	/** Redefined. */
 	virtual void sync(const QString &token) const;
 
 protected:
@@ -79,16 +89,31 @@ private:
 	void updateCacheDatabase(const std::list<RemoteTrack> &tracks);
 
 private slots:
+	/** TODO. */
 	void artistWasDoubleClicked(const QModelIndex &index);
+
+	/** Fetch detailed information about the Album and append it to playlist. */
 	void albumWasDoubleClicked(const QModelIndex &index);
+
+	/** Display everything! */
 	void dispatchReply(QNetworkReply *reply);
+
+	/** Open connection popup. */
 	void login();
+
+	/** Save credentials in the registry. */
 	void saveCredentials(bool enabled);
+
+	/** Search for expression (artist, album, etc). */
 	void search(const QString &expr);
+
+	/** TODO. */
 	void trackWasDoubleClicked(const QModelIndex &index);
 
 signals:
+	/** Callback for the view. */
 	void searchComplete(AbstractSearchDialog::Request, QList<QStandardItem*> results);
+
 	void aboutToProcessRemoteTracks(const std::list<RemoteTrack> &tracks);
 };
 

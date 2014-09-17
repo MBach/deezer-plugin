@@ -63,10 +63,12 @@
 
 NetworkAccessManager* NetworkAccessManager::networkAccessManager = NULL;
 
+int NetworkAccessManager::pendingRequests = 0;
+
 NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	: QNetworkAccessManager(parent),
 	requestFinishedCount(0), requestFinishedFromCacheCount(0), requestFinishedPipelinedCount(0),
-	requestFinishedSecureCount(0), requestFinishedDownloadBufferCount(0), _pendingRequests(0)
+	requestFinishedSecureCount(0), requestFinishedDownloadBufferCount(0)
 {
 	//connect(this, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)), SLOT(authenticationRequired(QNetworkReply*,QAuthenticator*)));
 	//connect(this, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)), SLOT(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)));
@@ -100,53 +102,14 @@ QNetworkReply* NetworkAccessManager::createRequest(Operation op, const QNetworkR
 		this->thread()->sleep(1);
 	}*/
 	QNetworkRequest request = req; // copy so we can modify
+	qDebug() << "create request" << pendingRequests;
+
 	// this is a temporary hack until we properly use the pipelining flags from QtWebkit
 	// pipeline everything! :)
 	request.setAttribute(QNetworkRequest::HttpPipeliningAllowedAttribute, true);
 	QNetworkReply *r = QNetworkAccessManager::createRequest(op, request, outgoingData);
-	//_pendingRequests++;
+	pendingRequests++;
 	return r;
-}
-
-/*QNetworkReply* NetworkAccessManager::get(const QNetworkRequest &request)
-{
-	while (_pendingRequests > 5) {
-		qDebug() << "waiting for 1 second";
-		this->thread()->sleep(1);
-	}
-	_pendingRequests++;
-	return QNetworkAccessManager::get(request);
-}*/
-
-void NetworkAccessManager::requestFinished(QNetworkReply *)
-{
-	_pendingRequests--;
-	//qDebug() << Q_FUNC_INFO << _pendingRequests;
-	/*requestFinishedCount++;
-
-	if (reply->attribute(QNetworkRequest::SourceIsFromCacheAttribute).toBool() == true)
-		requestFinishedFromCacheCount++;
-
-	if (reply->attribute(QNetworkRequest::HttpPipeliningWasUsedAttribute).toBool() == true)
-		requestFinishedPipelinedCount++;
-
-	if (reply->attribute(QNetworkRequest::ConnectionEncryptedAttribute).toBool() == true)
-		requestFinishedSecureCount++;
-
-	if (reply->attribute(QNetworkRequest::DownloadBufferAttribute).isValid() == true)
-		requestFinishedDownloadBufferCount++;
-
-	if (requestFinishedCount % 10)
-		return;*/
-
-
-//#ifdef QT_DEBUG
-//	double pctCached = (double(requestFinishedFromCacheCount) * 100.0/ double(requestFinishedCount));
-//	double pctPipelined = (double(requestFinishedPipelinedCount) * 100.0/ double(requestFinishedCount));
-//	double pctSecure = (double(requestFinishedSecureCount) * 100.0/ double(requestFinishedCount));
-//	double pctDownloadBuffer = (double(requestFinishedDownloadBufferCount) * 100.0/ double(requestFinishedCount));
-//	qDebug("STATS [%lli requests total] [%3.2f%% from cache] [%3.2f%% pipelined] [%3.2f%% SSL/TLS] [%3.2f%% Zerocopy]", requestFinishedCount, pctCached, pctPipelined, pctSecure, pctDownloadBuffer);
-//#endif
 }
 
 void NetworkAccessManager::loadSettings()
@@ -166,54 +129,6 @@ void NetworkAccessManager::loadSettings()
 	}
 	setProxy(proxy);
 }
-
-/*void NetworkAccessManager::authenticationRequired(QNetworkReply *reply, QAuthenticator *auth)
-{
-	BrowserMainWindow *mainWindow = BrowserApplication::instance()->mainWindow();
-
-	QDialog dialog(mainWindow);
-	dialog.setWindowFlags(Qt::Sheet);
-
-	Ui::PasswordDialog passwordDialog;
-	passwordDialog.setupUi(&dialog);
-
-	passwordDialog.iconLabel->setText(QString());
-	passwordDialog.iconLabel->setPixmap(mainWindow->style()->standardIcon(QStyle::SP_MessageBoxQuestion, 0, mainWindow).pixmap(32, 32));
-
-	QString introMessage = tr("<qt>Enter username and password for \"%1\" at %2</qt>");
-	introMessage = introMessage.arg(reply->url().toString().toHtmlEscaped()).arg(reply->url().toString().toHtmlEscaped());
-	passwordDialog.introLabel->setText(introMessage);
-	passwordDialog.introLabel->setWordWrap(true);
-
-	if (dialog.exec() == QDialog::Accepted) {
-		auth->setUser(passwordDialog.userNameLineEdit->text());
-		auth->setPassword(passwordDialog.passwordLineEdit->text());
-	}
-}*/
-
-/*void NetworkAccessManager::proxyAuthenticationRequired(const QNetworkProxy &proxy, QAuthenticator *auth)
-{
-	BrowserMainWindow *mainWindow = BrowserApplication::instance()->mainWindow();
-
-	QDialog dialog(mainWindow);
-	dialog.setWindowFlags(Qt::Sheet);
-
-	Ui::ProxyDialog proxyDialog;
-	proxyDialog.setupUi(&dialog);
-
-	proxyDialog.iconLabel->setText(QString());
-	proxyDialog.iconLabel->setPixmap(mainWindow->style()->standardIcon(QStyle::SP_MessageBoxQuestion, 0, mainWindow).pixmap(32, 32));
-
-	QString introMessage = tr("<qt>Connect to proxy \"%1\" using:</qt>");
-	introMessage = introMessage.arg(proxy.hostName().toHtmlEscaped());
-	proxyDialog.introLabel->setText(introMessage);
-	proxyDialog.introLabel->setWordWrap(true);
-
-	if (dialog.exec() == QDialog::Accepted) {
-		auth->setUser(proxyDialog.userNameLineEdit->text());
-		auth->setPassword(proxyDialog.passwordLineEdit->text());
-	}
-}*/
 
 void NetworkAccessManager::ignoreSslErrors(QNetworkReply *reply, const QList<QSslError> &)
 {

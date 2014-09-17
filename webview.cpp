@@ -79,6 +79,7 @@ bool WebPage::acceptNavigationRequest(QWebFrame *, const QNetworkRequest &reques
 		int j = r.mid(i + 13).indexOf('&');
 		QString t = r.mid(i + 13, j);
 		if (!_hasToken) {
+			qDebug() << "token:" << t;
 			emit tokenFound(t);
 			_hasToken = true;
 		}
@@ -161,11 +162,6 @@ WebView::WebView(QWidget* parent)
 	connect(this, SIGNAL(loadProgress(int)), this, SLOT(setProgress(int)));
 	connect(this, SIGNAL(loadFinished(bool)), this, SLOT(loadFinished()));
 	page()->setForwardUnsupportedContent(true);
-}
-
-void WebView::openLinkInNewTab()
-{
-	pageAction(QWebPage::OpenLinkInNewWindow)->trigger();
 }
 
 void WebView::setProgress(int progress)

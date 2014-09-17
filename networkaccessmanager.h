@@ -57,7 +57,7 @@ public:
 
 	virtual QNetworkReply* createRequest ( Operation op, const QNetworkRequest & req, QIODevice * outgoingData = 0 );
 
-	//QNetworkReply *get(const QNetworkRequest &request);
+	static int pendingRequests;
 
 private:
 	QList<QString> sslTrustedHostList;
@@ -70,15 +70,10 @@ private:
 	/** The unique instance of this class. */
 	static NetworkAccessManager *networkAccessManager;
 
-	int _pendingRequests;
-
 public slots:
 	void loadSettings();
-	void requestFinished(QNetworkReply *reply);
 
 private slots:
-	//void authenticationRequired(QNetworkReply *reply, QAuthenticator *auth);
-	//void proxyAuthenticationRequired(const QNetworkProxy &proxy, QAuthenticator *auth);
 	void ignoreSslErrors(QNetworkReply *reply, const QList<QSslError> &);
 };
 

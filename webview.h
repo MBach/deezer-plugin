@@ -110,7 +110,6 @@ private slots:
 	void setProgress(int progress);
 	void loadFinished();
 	void setStatusBarText(const QString &string);
-	void openLinkInNewTab();
 
 signals:
 	void tokenFound(const QString &t);

@@ -15,6 +15,7 @@
 
 #include <QtDebug>
 
+/** Default constructor. */
 DeezerPlugin::DeezerPlugin()
 	: QObject(), _artists(NULL), _albums(NULL), _tracks(NULL), _searchDialog(NULL),
 	  _checkBox(NULL), _webPlayer(new DeezerWebPlayer(this))
@@ -47,6 +48,7 @@ DeezerPlugin::DeezerPlugin()
 	}
 }
 
+/** Default destructor. */
 DeezerPlugin::~DeezerPlugin()
 {
 	qDebug() << Q_FUNC_INFO;
@@ -58,6 +60,7 @@ DeezerPlugin::~DeezerPlugin()
 	delete _checkBox;
 }
 
+/** Load and return user interface to manipulate this plugin. */
 QWidget* DeezerPlugin::configPage()
 {
 	Settings *settings = Settings::getInstance();
@@ -98,6 +101,7 @@ QWidget* DeezerPlugin::configPage()
 	return widget;
 }
 
+/** Redefined. */
 void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 {
 	_checkBox = new QCheckBox;
@@ -118,8 +122,10 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 	connect(_tracks, &QListView::doubleClicked, this, &DeezerPlugin::trackWasDoubleClicked);
 }
 
+/** Redefined. */
 void DeezerPlugin::sync(const QString &token) const
 {
+	qDebug() << Q_FUNC_INFO << "token empty?" << token.isEmpty();
 	if (!token.isEmpty()) {
 		qDebug() << Q_FUNC_INFO << token;
 		qDebug() << "Ready to synchronize Library with Deezer (fetching remote only)";
@@ -365,6 +371,7 @@ void DeezerPlugin::artistWasDoubleClicked(const QModelIndex &index)
 	}
 }
 
+/** Fetch detailed information about the Album and append it to playlist. */
 void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
 {
 	QStandardItemModel *m = qobject_cast<QStandardItemModel*>(_albums->model());
@@ -376,14 +383,17 @@ void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
 		QString idAlbum = item->data(AbstractSearchDialog::DT_Identifier).toString();
 		QNetworkRequest r(QUrl("http://api.deezer.com/album/" + idAlbum + "?output=xml"));
 		QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
-		qDebug() << "reply?" << reply;
 		_repliesWhichInteractWithUi.insert(reply, RPL_SendToCurrentPlaylist);
 	}
 }
 
+/** Display everything! */
 void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 {
 	qDebug() << Q_FUNC_INFO << reply;
+	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
+	nam->pendingRequests = nam->pendingRequests - 1;
+	qDebug() << nam->pendingRequests;
 	QNetworkRequest request = reply->request();
 	QString r = request.url().toDisplayString();
 	QXmlStreamReader xml(reply->readAll());
@@ -416,10 +426,14 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 	} else if (r.startsWith("http://api.deezer.com/")) {
 		qDebug() << "unknown search request" << r;
 	} else {
-		qDebug() << "unknown reply" << reply->error() << reply->errorString();
+		if (reply->error() != QNetworkReply::NoError) {
+			qDebug() << "unknown reply" << reply->error() << reply->errorString();
+		}
 	}
 }
 
+
+/** Open connection popup. */
 void DeezerPlugin::login()
 {
 	qDebug() << Q_FUNC_INFO;
@@ -430,6 +444,7 @@ void DeezerPlugin::login()
 	_pages.append(webView);
 }
 
+/** Save credentials in the registry. */
 void DeezerPlugin::saveCredentials(bool enabled)
 {
 	Settings *settings = Settings::getInstance();
@@ -446,6 +461,7 @@ void DeezerPlugin::saveCredentials(bool enabled)
 	}
 }
 
+/** Search for expression (artist, album, etc). */
 void DeezerPlugin::search(const QString &expr)
 {
 	if (!_checkBox->isChecked()) {
