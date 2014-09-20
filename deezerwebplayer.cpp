@@ -10,8 +10,9 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 	RemoteMediaPlayer(parent), _webView(new WebView),  _deezerPlugin(parent), _stopButtonWasTriggered(false)
 {
 	/// FIXME: how to play sound with invisible webView?
-	_webView->load(QUrl("http://miam-player.org/deezer-micro/index.html"));
+	_webView->load(QUrl("http://www.miam-player.org/deezer-micro/index.html"));
 	_webView->show();
+	_webView->page()->setView(_webView);
 	_webView->page()->mainFrame()->addToJavaScriptWindowObject("dzWebPlayer", this);
 
 	connect(_webView->page()->mainFrame(), &QWebFrame::javaScriptWindowObjectCleared, this, [=]() {
@@ -23,6 +24,23 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 	// Init callback actions
 	connect(_webView->page()->mainFrame(), &QWebFrame::loadFinished, this, [=]() {
 		qDebug() << "loadFinished";
+
+		/*
+		QString getLoginStatus = "DZ.getLoginStatus(function(response) {" \
+		"	if (response.authResponse) {" \
+		"		dzWebPlayer.log(response);" \
+		"	} else {" \
+		"		dzWebPlayer.log(response);" \
+		"	}" \
+		"});";
+		_webView->page()->mainFrame()->evaluateJavaScript(getLoginStatus);
+		*/
+
+		QString ready = "DZ.ready(function(sdk_options){" \
+		"	dzWebPlayer.log(DZ SDK is ready);" \
+		"	dzWebPlayer.aboutToLog(DZ SDK is ready);" \
+		"});";
+		_webView->page()->mainFrame()->evaluateJavaScript(ready);
 
 		QString posChanged = "DZ.Event.subscribe('player_position', function(a){ dzWebPlayer.positionChanged(1000 * a[0], 1000 * a[1]); });";
 		_webView->page()->mainFrame()->evaluateJavaScript(posChanged);
@@ -42,7 +60,7 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 
 		/// XXX: auto-hiding but must be changed later!
 		if (_webView->isVisible()) {
-			_webView->close();
+			//_webView->close();
 		}
 	});
 }
@@ -54,18 +72,31 @@ void DeezerWebPlayer::pause()
 
 void DeezerWebPlayer::play(const QUrl &track)
 {
-	qDebug() << Q_FUNC_INFO;
+	qDebug() << Q_FUNC_INFO << track;
 	QString url = track.toString();
 	int slash = url.lastIndexOf("/");
 	QString id = url.mid(slash + 1);
 	QString playTrack = "DZ.player.playTracks([" + id + "]);";
-	_webView->page()->mainFrame()->evaluateJavaScript(playTrack);
+	qDebug() << Q_FUNC_INFO << "JS to evaluate:" << playTrack;
+	QVariant ret = _webView->page()->mainFrame()->evaluateJavaScript(playTrack);
+	qDebug() << Q_FUNC_INFO << ret;
+
+
+	QString ready = "DZ.ready(function(sdk_options){" \
+	"	console.log('DZ SDK is ready', sdk_options);" \
+	"	dzWebPlayer.log(response);" \
+	"});";
+	ret = _webView->page()->mainFrame()->evaluateJavaScript(ready);
+	qDebug() << Q_FUNC_INFO << "JS to evaluate:" << ready;
+	qDebug() << Q_FUNC_INFO << ret;
+
 }
 
 void DeezerWebPlayer::resume()
 {
 	qDebug() << Q_FUNC_INFO;
-	_webView->page()->mainFrame()->evaluateJavaScript("DZ.player.play();");
+	QVariant ret = _webView->page()->mainFrame()->evaluateJavaScript("DZ.player.play();");
+	qDebug() << Q_FUNC_INFO << ret;
 }
 
 void DeezerWebPlayer::seek(float pos)
@@ -88,6 +119,11 @@ void DeezerWebPlayer::stop()
 	} else {
 		emit stopped();
 	}
+}
+
+void DeezerWebPlayer::log(const QString &logMessage)
+{
+	qDebug() << Q_FUNC_INFO << logMessage;
 }
 
 void DeezerWebPlayer::playerHasPaused()

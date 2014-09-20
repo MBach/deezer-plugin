@@ -58,13 +58,12 @@
 #include <QWebElement>
 #include <QWebSecurityOrigin>
 
-bool WebPage::_hasToken = false;
-
 WebPage::WebPage(QObject *parent)
 	: QWebPage(parent)
 	, m_keyboardModifiers(Qt::NoModifier)
 	, m_pressedButtons(Qt::NoButton)
 	, m_openInNewTab(false)
+	, _hasToken(false)
 {
 	setNetworkAccessManager(NetworkAccessManager::getInstance());
 	connect(this, SIGNAL(unsupportedContent(QNetworkReply*)), this, SLOT(handleUnsupportedContent(QNetworkReply*)));
@@ -78,9 +77,16 @@ bool WebPage::acceptNavigationRequest(QWebFrame *, const QNetworkRequest &reques
 		int i = r.indexOf("access_token=");
 		int j = r.mid(i + 13).indexOf('&');
 		QString t = r.mid(i + 13, j);
-		if (!_hasToken) {
-			qDebug() << "token:" << t;
-			emit tokenFound(t);
+		qDebug() << "token 1:" << t;
+		if (_hasToken == false) {
+			qDebug() << "token 2:" << t;
+			WebView *view = qobject_cast<WebView*>(this->view());
+			if (view) {
+				view->setToken(t);
+			} else {
+				qDebug() << "no view ?";
+			}
+			//emit tokenFound(t);
 			_hasToken = true;
 		}
 	}
@@ -89,7 +95,7 @@ bool WebPage::acceptNavigationRequest(QWebFrame *, const QNetworkRequest &reques
 
 QWebPage *WebPage::createWindow(QWebPage::WebWindowType)
 {
-	return new WebPage();
+	return new WebPage(this->parent());
 }
 
 void WebPage::handleUnsupportedContent(QNetworkReply *reply)
@@ -144,8 +150,6 @@ void WebPage::handleUnsupportedContent(QNetworkReply *reply)
 	}
 }
 
-QString WebView::token = QString();
-
 WebView::WebView(QWidget* parent)
 	: QWebView(parent)
 	, m_progress(0)
@@ -157,7 +161,8 @@ WebView::WebView(QWidget* parent)
 	m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
 	m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("http://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
 	setPage(m_page);
-	connect(m_page, &WebPage::tokenFound, this, &WebView::tokenFound);
+	m_page->setView(this);
+	connect(m_page, &WebPage::tokenFound, this, &WebView::aboutToSyncWithToken);
 	connect(page(), SIGNAL(statusBarMessage(QString)), SLOT(setStatusBarText(QString)));
 	connect(this, SIGNAL(loadProgress(int)), this, SLOT(setProgress(int)));
 	connect(this, SIGNAL(loadFinished(bool)), this, SLOT(loadFinished()));
@@ -189,6 +194,17 @@ QString WebView::lastStatusBarText() const
 	return m_statusBarText;
 }
 
+QString WebView::token() const
+{
+	return _token;
+}
+
+void WebView::setToken(const QString &token)
+{
+	_token = token;
+	emit aboutToSyncWithToken(_token);
+}
+
 QUrl WebView::url() const
 {
 	QUrl url = QWebView::url();
@@ -209,6 +225,7 @@ QWebView* WebView::createWindow(QWebPage::WebWindowType)
 {
 	WebView *w = new WebView;
 	w->page()->setNetworkAccessManager(NetworkAccessManager::getInstance());
+	w->page()->setView(w);
 
 	// Autoclose the popup
 	connect(w->page(), &QWebPage::windowCloseRequested, this, [=]() {

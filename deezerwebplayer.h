@@ -33,8 +33,11 @@ public slots:
 	virtual void seek(float pos);
 	virtual void setVolume(int volume);
 	virtual void stop();
+	virtual void log(const QString &logMessage);
 
 	void playerHasPaused();
+
+	/// TEST
 };
 
 #endif // DEEZERWEBPLAYER_H

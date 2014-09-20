@@ -25,25 +25,25 @@ HEADERS += model/remotetrack.h \
     autosaver.h \
     basicplugin.h \
     cookiejar.h \
+    deezerdatabase.h \
     deezerplugin.h \
     deezerwebplayer.h \
     filehelper.h \
     miamcore_global.h \
     networkaccessmanager.h \
-    settings.h \
-    webview.h \
     remotemediaplayer.h \
     remotemediaplayerplugin.h \
-    deezerdatabase.h
+    settings.h \
+    webview.h
 
 SOURCES += model/remotetrack.cpp \
     autosaver.cpp \
     cookiejar.cpp \
+    deezerdatabase.cpp \
     deezerplugin.cpp \
     deezerwebplayer.cpp \
     networkaccessmanager.cpp \
-    webview.cpp \
-    deezerdatabase.cpp
+    webview.cpp
 
 RESOURCES += \
     resources.qrc
@@ -53,7 +53,3 @@ FORMS += \
 
 TRANSLATIONS += translations/Deezer-Plugin_en.ts \
     translations/Deezer-Plugin_fr.ts
-
-OTHER_FILES += \
-    player_basic.html \
-    dz.js

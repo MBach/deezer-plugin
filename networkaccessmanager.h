@@ -59,6 +59,14 @@ public:
 
 	static int pendingRequests;
 
+	QNetworkReply * get(const QNetworkRequest & request);
+	QNetworkReply * post(const QNetworkRequest & request, QIODevice * data);
+	QNetworkReply * post(const QNetworkRequest & request, const QByteArray & data);
+	QNetworkReply * post(const QNetworkRequest & request, QHttpMultiPart * multiPart);
+	QNetworkReply * put(const QNetworkRequest & request, QIODevice * data);
+	QNetworkReply * put(const QNetworkRequest & request, QHttpMultiPart * multiPart);
+	QNetworkReply * put(const QNetworkRequest & request, const QByteArray & data);
+
 private:
 	QList<QString> sslTrustedHostList;
 	qint64 requestFinishedCount;

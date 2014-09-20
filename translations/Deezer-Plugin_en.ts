@@ -2,67 +2,6 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
-    <name>CookieExceptionsModel</name>
-    <message>
-        <location filename="../cookiejar.cpp" line="513"/>
-        <source>Website</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="515"/>
-        <source>Status</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="535"/>
-        <source>Allow</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="544"/>
-        <source>Block</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="553"/>
-        <source>Allow For Session</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>CookieModel</name>
-    <message>
-        <location filename="../cookiejar.cpp" line="403"/>
-        <source>Website</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="405"/>
-        <source>Name</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="407"/>
-        <source>Path</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="409"/>
-        <source>Secure</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="411"/>
-        <source>Expires</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../cookiejar.cpp" line="413"/>
-        <source>Contents</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
     <name>DeezerPluginConfigPage</name>
     <message>
         <location filename="../config.ui" line="31"/>
@@ -90,9 +29,48 @@
         <translation>Important notice: from this developement stage, password is NOT encrypted on your hard drive. Use this functionality at your own risk. The password is stored only on your computer but it is poorly encripted. If you are the only one to use this computer well it&apos;s perfectly fine! I do not collect any information about your account.</translation>
     </message>
     <message>
+        <location filename="../config.ui" line="120"/>
+        <source>Manage items to synchronize</source>
+        <translation>Manage items to synchronize</translation>
+    </message>
+    <message>
+        <location filename="../config.ui" line="129"/>
+        <source>Playlists</source>
+        <translation>Playlists</translation>
+    </message>
+    <message>
+        <location filename="../config.ui" line="142"/>
+        <source>Artists</source>
+        <translation>Artists</translation>
+    </message>
+    <message>
+        <location filename="../config.ui" line="160"/>
+        <location filename="../config.ui" line="192"/>
+        <source>Albums</source>
+        <translation>Albums</translation>
+    </message>
+    <message>
+        <location filename="../config.ui" line="170"/>
+        <source>EP</source>
+        <translation>EP</translation>
+    </message>
+    <message>
+        <location filename="../config.ui" line="180"/>
+        <source>Singles</source>
+        <translation>Singles</translation>
+    </message>
+    <message>
         <location filename="../config.ui" line="95"/>
         <source>Store informations on the disk</source>
         <translation>Store informations on the disk</translation>
+    </message>
+</context>
+<context>
+    <name>WebPage</name>
+    <message>
+        <location filename="../webview.cpp" line="123"/>
+        <source>Error loading page: %1</source>
+        <translation>Error loading page: %1</translation>
     </message>
 </context>
 </TS>

@@ -66,7 +66,7 @@ private:
 	QUrl m_loadingUrl;
 
 	/// test
-	static bool _hasToken;
+	bool _hasToken;
 
 public:
 	WebPage(QObject *parent = 0);
@@ -93,6 +93,9 @@ private:
 	int m_progress;
 	WebPage *m_page;
 
+	/// Test
+	QString _token;
+
 public:
 	WebView(QWidget *parent = 0);
 
@@ -101,7 +104,9 @@ public:
 
 	QString lastStatusBarText() const;
 	inline int progress() const { return m_progress; }
-	static QString token;
+
+	QString token() const;
+	void setToken(const QString &token);
 
 protected:
 	QWebView* createWindow(QWebPage::WebWindowType);
@@ -112,7 +117,7 @@ private slots:
 	void setStatusBarText(const QString &string);
 
 signals:
-	void tokenFound(const QString &t);
+	void aboutToSyncWithToken(const QString &t);
 };
 
 #endif

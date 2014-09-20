@@ -26,7 +26,11 @@ DeezerPlugin::DeezerPlugin()
 	// Dispatch replies: search for something, get artist info, get tracks from album, get track info, fetch, synchronize...
 	connect(nam, &QNetworkAccessManager::finished, this, &DeezerPlugin::dispatchReply);
 
-	connect(_webPlayer->webView(), &WebView::tokenFound, this, &DeezerPlugin::sync);
+	connect(_webPlayer->webView(), &WebView::aboutToSyncWithToken, this, &DeezerPlugin::sync);
+	/*connect(_webPlayer->webView(), &WebView::aboutToSyncWithToken, this, [=](const QString &token) {
+		qDebug() << "about to sync";
+		this->sync(token);
+	});*/
 
 	QWebSettings *s = QWebSettings::globalSettings();
 	/// XXX
@@ -390,13 +394,13 @@ void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
 /** Display everything! */
 void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 {
-	qDebug() << Q_FUNC_INFO << reply;
-	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
-	nam->pendingRequests = nam->pendingRequests - 1;
-	qDebug() << nam->pendingRequests;
+	qDebug() << Q_FUNC_INFO << reply->request().url();
+	qDebug() << Q_FUNC_INFO << reply->url();
+
 	QNetworkRequest request = reply->request();
 	QString r = request.url().toDisplayString();
 	QXmlStreamReader xml(reply->readAll());
+
 	/// WARNING: used by sync() and search() -> album/<id>/tracklist
 	QRegularExpression reg("http://api.deezer.com/album/[0-9]+/tracks");
 	if (r.startsWith("http://api.deezer.com/album/") && !r.contains(reg)) {
@@ -427,11 +431,11 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 		qDebug() << "unknown search request" << r;
 	} else {
 		if (reply->error() != QNetworkReply::NoError) {
-			qDebug() << "unknown reply" << reply->error() << reply->errorString();
+			qDebug() << "Unknown reply. Code:" << reply->error() << "String:" << reply->errorString();
+			qDebug() << "Reply url: " << reply->url() << ", requested url" << reply->request().url();
 		}
 	}
 }
-
 
 /** Open connection popup. */
 void DeezerPlugin::login()
@@ -439,7 +443,7 @@ void DeezerPlugin::login()
 	qDebug() << Q_FUNC_INFO;
 	WebView *webView = new WebView;
 	webView->installEventFilter(this);
-	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://miam-player.org/deezer-micro/channel.html&response_type=token&scope=manage_library,basic_access"));
+	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://www.miam-player.org/deezer-micro/channel.html&response_type=token&scope=manage_library,basic_access"));
 	webView->show();
 	_pages.append(webView);
 }

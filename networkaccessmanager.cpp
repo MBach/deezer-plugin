@@ -61,6 +61,8 @@
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QSslError>
 
+#include <QThread>
+
 NetworkAccessManager* NetworkAccessManager::networkAccessManager = NULL;
 
 int NetworkAccessManager::pendingRequests = 0;
@@ -93,14 +95,16 @@ NetworkAccessManager* NetworkAccessManager::getInstance()
 	return networkAccessManager;
 }
 
-#include <QThread>
-
 QNetworkReply* NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & req, QIODevice * outgoingData)
 {
-	/*while (_pendingRequests > 10) {
+	/*while (pendingRequests > 4) {
 		qDebug() << "waiting for 1 second";
 		this->thread()->sleep(1);
 	}*/
+	//if (pendingRequests > 4) {
+	//	qDebug() << "waiting for 1 second";
+	//	this->thread()->sleep(1);
+	//}
 	QNetworkRequest request = req; // copy so we can modify
 	qDebug() << "create request" << pendingRequests;
 
@@ -108,8 +112,51 @@ QNetworkReply* NetworkAccessManager::createRequest(Operation op, const QNetworkR
 	// pipeline everything! :)
 	request.setAttribute(QNetworkRequest::HttpPipeliningAllowedAttribute, true);
 	QNetworkReply *r = QNetworkAccessManager::createRequest(op, request, outgoingData);
-	pendingRequests++;
+	//pendingRequests++;
 	return r;
+}
+
+QNetworkReply * NetworkAccessManager::get(const QNetworkRequest & request)
+{
+	static int getCount = 0;
+	qDebug() << Q_FUNC_INFO << ++getCount;
+	return QNetworkAccessManager::get(request);
+}
+
+QNetworkReply * NetworkAccessManager::post(const QNetworkRequest & request, QIODevice * data)
+{
+	qDebug() << Q_FUNC_INFO;
+	return QNetworkAccessManager::post(request, data);
+}
+
+QNetworkReply * NetworkAccessManager::post(const QNetworkRequest & request, const QByteArray & data)
+{
+	qDebug() << Q_FUNC_INFO;
+	return QNetworkAccessManager::post(request, data);
+}
+
+QNetworkReply * NetworkAccessManager::post(const QNetworkRequest & request, QHttpMultiPart * multiPart)
+{
+	qDebug() << Q_FUNC_INFO;
+	return QNetworkAccessManager::post(request, multiPart);
+}
+
+QNetworkReply * NetworkAccessManager::put(const QNetworkRequest & request, QIODevice * data)
+{
+	qDebug() << Q_FUNC_INFO;
+	return QNetworkAccessManager::put(request, data);
+}
+
+QNetworkReply * NetworkAccessManager::put(const QNetworkRequest & request, QHttpMultiPart * multiPart)
+{
+	qDebug() << Q_FUNC_INFO;
+	return QNetworkAccessManager::put(request, multiPart);
+}
+
+QNetworkReply * NetworkAccessManager::put(const QNetworkRequest & request, const QByteArray & data)
+{
+	qDebug() << Q_FUNC_INFO;
+	return QNetworkAccessManager::put(request, data);
 }
 
 void NetworkAccessManager::loadSettings()
@@ -134,7 +181,7 @@ void NetworkAccessManager::ignoreSslErrors(QNetworkReply *reply, const QList<QSs
 {
 	// check if SSL certificate has been trusted already
 	QString replyHost = reply->url().host() + QString(":%1").arg(reply->url().port());
-	if(!sslTrustedHostList.contains(replyHost)) {
+	if (!sslTrustedHostList.contains(replyHost)) {
 		//BrowserMainWindow *mainWindow = BrowserApplication::instance()->mainWindow();
 		reply->ignoreSslErrors();
 		sslTrustedHostList.append(replyHost);
