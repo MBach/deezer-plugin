@@ -142,7 +142,7 @@ void DeezerPlugin::sync(const QString &token) const
 /** Redefined to open Deezer's home page. */
 bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 {
-	if (event->type() == QEvent::MouseButtonPress) {
+	if (obj == _config.logo && event->type() == QEvent::MouseButtonPress) {
 		QDesktopServices::openUrl(QUrl("http://www.deezer.com"));
 		return true;
 	} else if (event->type() == QEvent::Show) {
@@ -443,7 +443,7 @@ void DeezerPlugin::login()
 	qDebug() << Q_FUNC_INFO;
 	WebView *webView = new WebView;
 	webView->installEventFilter(this);
-	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&format=popup&redirect_uri=http://www.miam-player.org/deezer-micro/channel.html&response_type=token&scope=manage_library,basic_access"));
+	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&redirect_uri=http://www.miam-player.org/deezer-micro/channel.html&response_type=token&scope=manage_library,basic_access"));
 	webView->show();
 	_pages.append(webView);
 }

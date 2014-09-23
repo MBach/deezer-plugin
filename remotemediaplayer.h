@@ -28,7 +28,6 @@ public slots:
 	virtual void seek(float pos) = 0;
 	virtual void setVolume(int volume) = 0;
 	virtual void stop() = 0;
-	virtual void log(const QString &logMessage) = 0;
 
 signals:
 	void paused();
@@ -43,8 +42,6 @@ signals:
 
 	/** Current track has finished. */
 	void trackHasEnded();
-
-	void aboutToLog(const QString &logMessage);
 };
 
 #endif // REMOTEMEDIAPLAYER_H

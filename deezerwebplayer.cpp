@@ -15,32 +15,11 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 	_webView->page()->setView(_webView);
 	_webView->page()->mainFrame()->addToJavaScriptWindowObject("dzWebPlayer", this);
 
-	connect(_webView->page()->mainFrame(), &QWebFrame::javaScriptWindowObjectCleared, this, [=]() {
-		qDebug() << "warning, objets are cleared!";
-	});
-
 	Settings *settings = Settings::getInstance();
 
 	// Init callback actions
 	connect(_webView->page()->mainFrame(), &QWebFrame::loadFinished, this, [=]() {
 		qDebug() << "loadFinished";
-
-		/*
-		QString getLoginStatus = "DZ.getLoginStatus(function(response) {" \
-		"	if (response.authResponse) {" \
-		"		dzWebPlayer.log(response);" \
-		"	} else {" \
-		"		dzWebPlayer.log(response);" \
-		"	}" \
-		"});";
-		_webView->page()->mainFrame()->evaluateJavaScript(getLoginStatus);
-		*/
-
-		QString ready = "DZ.ready(function(sdk_options){" \
-		"	dzWebPlayer.log(DZ SDK is ready);" \
-		"	dzWebPlayer.aboutToLog(DZ SDK is ready);" \
-		"});";
-		_webView->page()->mainFrame()->evaluateJavaScript(ready);
 
 		QString posChanged = "DZ.Event.subscribe('player_position', function(a){ dzWebPlayer.positionChanged(1000 * a[0], 1000 * a[1]); });";
 		_webView->page()->mainFrame()->evaluateJavaScript(posChanged);
@@ -60,7 +39,7 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 
 		/// XXX: auto-hiding but must be changed later!
 		if (_webView->isVisible()) {
-			//_webView->close();
+			_webView->close();
 		}
 	});
 }
@@ -77,26 +56,13 @@ void DeezerWebPlayer::play(const QUrl &track)
 	int slash = url.lastIndexOf("/");
 	QString id = url.mid(slash + 1);
 	QString playTrack = "DZ.player.playTracks([" + id + "]);";
-	qDebug() << Q_FUNC_INFO << "JS to evaluate:" << playTrack;
-	QVariant ret = _webView->page()->mainFrame()->evaluateJavaScript(playTrack);
-	qDebug() << Q_FUNC_INFO << ret;
-
-
-	QString ready = "DZ.ready(function(sdk_options){" \
-	"	console.log('DZ SDK is ready', sdk_options);" \
-	"	dzWebPlayer.log(response);" \
-	"});";
-	ret = _webView->page()->mainFrame()->evaluateJavaScript(ready);
-	qDebug() << Q_FUNC_INFO << "JS to evaluate:" << ready;
-	qDebug() << Q_FUNC_INFO << ret;
-
+	_webView->page()->mainFrame()->evaluateJavaScript(playTrack);
 }
 
 void DeezerWebPlayer::resume()
 {
 	qDebug() << Q_FUNC_INFO;
-	QVariant ret = _webView->page()->mainFrame()->evaluateJavaScript("DZ.player.play();");
-	qDebug() << Q_FUNC_INFO << ret;
+	_webView->page()->mainFrame()->evaluateJavaScript("DZ.player.play();");
 }
 
 void DeezerWebPlayer::seek(float pos)
@@ -119,11 +85,6 @@ void DeezerWebPlayer::stop()
 	} else {
 		emit stopped();
 	}
-}
-
-void DeezerWebPlayer::log(const QString &logMessage)
-{
-	qDebug() << Q_FUNC_INFO << logMessage;
 }
 
 void DeezerWebPlayer::playerHasPaused()
