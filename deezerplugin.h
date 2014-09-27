@@ -41,7 +41,7 @@ private:
 	QCheckBox *_checkBox;
 	DeezerWebPlayer *_webPlayer;
 	DeezerDatabase _db;
-	QCache<QString, RemoteTrack> _cache;
+	QMap<QString, RemoteTrack*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
 
 public:
@@ -82,7 +82,7 @@ protected:
 private:
 	QString extract(QXmlStreamReader &xml, const QString &criterion);
 	void extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml);
-	void extractAlbumListFromArtist(QNetworkReply *reply, QXmlStreamReader &xml);
+	void extractAlbumListFromArtist(QNetworkReply *reply, const QString &artistId, QXmlStreamReader &xml);
 	void extractSynchronizedArtists(QXmlStreamReader &xml);
 	void extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml);
 	void searchRequestFinished(QXmlStreamReader &xml);

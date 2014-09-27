@@ -45,6 +45,8 @@
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkRequest>
 
+#include <QQueue>
+
 class NetworkAccessManager : public QNetworkAccessManager
 {
 	Q_OBJECT
@@ -57,7 +59,9 @@ public:
 
 	virtual QNetworkReply* createRequest ( Operation op, const QNetworkRequest & req, QIODevice * outgoingData = 0 );
 
-	static int pendingRequests;
+	int getCount;
+
+	QQueue<QNetworkRequest> _queue;
 
 	QNetworkReply * get(const QNetworkRequest & request);
 	QNetworkReply * post(const QNetworkRequest & request, QIODevice * data);

@@ -11,6 +11,7 @@
 #include <QNetworkReply>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include <QSqlRecord>
 #include <QWebView>
 
 #include <QtDebug>
@@ -135,7 +136,9 @@ void DeezerPlugin::sync(const QString &token) const
 		qDebug() << "Ready to synchronize Library with Deezer (fetching remote only)";
 		// First, get checksum for Artists, Albums and Playlists
 		/// TODO: playlists, albums (followers?)
-		NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + token)));
+		NetworkAccessManager *inst = NetworkAccessManager::getInstance();
+		inst->getCount = 0;
+		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + token)));
 	}
 }
 
@@ -215,9 +218,9 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 	}
 }
 
-void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, QXmlStreamReader &xml)
+void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QString &artistId, QXmlStreamReader &xml)
 {
-	qDebug() << Q_FUNC_INFO;
+	qDebug() << Q_FUNC_INFO << reply->url();
 	QList<RemoteTrack*> albums;
 	Settings *settings = Settings::getInstance();
 	while(!xml.atEnd() && !xml.hasError()) {
@@ -227,7 +230,7 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, QXmlStreamRe
 				RemoteTrack *album = new RemoteTrack;
 				QString record_type;
 				album->setId(this->extract(xml, "id"));
-				album->setTitle(this->extract(xml, "title"));
+				album->setAlbum(this->extract(xml, "title"));
 				/// TODO
 				this->extract(xml, "cover");
 				//album.setIcon(xml.readElementText());
@@ -238,15 +241,20 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, QXmlStreamRe
 			}
 		}
 	}
-	if (_db.open()) {
+	if (_db.open() && !albums.isEmpty()) {
+		QSqlQuery qArtistName = _db.exec("SELECT name FROM artists WHERE id = " + artistId);
+		qArtistName.next();
+		QString artist = qArtistName.record().value(0).toString();
 		for (int i = 0; i < albums.size(); i++) {
 			RemoteTrack *album = albums.at(i);
 			QSqlQuery insert(_db);
-			insert.prepare("INSERT INTO albums(id, name, cover) VALUES (?, ?, ?)");
+			insert.prepare("INSERT INTO albums(id, name, cover, artist) VALUES (?, ?, ?, ?)");
 			insert.addBindValue(album->id());
-			insert.addBindValue(album->title());
+			insert.addBindValue(album->album());
 			//https://api.deezer.com/album/<id>/image?size=big
 			insert.addBindValue("todo");
+			insert.addBindValue(artist);
+			album->setArtist(artist);
 			_cache.insert(album->id(), album);
 
 			// Finally, extract track list
@@ -259,10 +267,14 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, QXmlStreamRe
 					qDebug() << "forwarding" << forward << nextReply;
 					_repliesWhichInteractWithUi.insert(nextReply, forward);
 				}
+			} else {
+				qDebug() << "couldn't insert" << album->title() << "in artist table";
 			}
 		}
-		_db.close();
+	} else {
+		qDebug() << "couldn't open database";
 	}
+	_db.close();
 }
 
 void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
@@ -287,13 +299,19 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 				// Out of sync
 				if (checkSum.isNull() || checkSum.toString() != sum) {
 					needToSyncArtists = true;
+					qDebug() << "needToSyncArtists" << needToSyncArtists;
 				}
 			}
 		}
 	}
 	if (needToSyncArtists || _db.isEmpty()) {
+		qDebug() << "_db.isEmpty()" << _db.isEmpty();
 		if (_db.open()) {
-			_db.exec("TRUNCATE TABLE artists");
+			qDebug() << "_db.open()" << artists.size();
+			QSqlQuery truncate(_db);
+			if (!truncate.exec("DELETE FROM artists")) {
+				qDebug() << "couldn't truncate table artists :(";
+			}
 			bool ok = true;
 			for (int i = 0; i < artists.size(); i++) {
 				RemoteTrack artist = artists.at(i);
@@ -307,6 +325,7 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 					_repliesWhichInteractWithUi.insert(reply, RPL_UpdateCacheDatabase);
 				} else {
 					ok = false;
+					qDebug() << "couldn't insert artist :(" << artist.artist();
 				}
 			}
 			_db.close();
@@ -322,12 +341,12 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 
 void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml)
 {
-	qDebug() << Q_FUNC_INFO << reply;
+	qDebug() << Q_FUNC_INFO << reply->url() << "readable?" << reply->isReadable();
 	static QIcon icon(":/icon");
 	std::list<RemoteTrack> tracks;
 	if (_cache.contains(albumID)) {
-		RemoteTrack *templateTrack = _cache[albumID];
-		qDebug() << albumID << templateTrack->artist() << templateTrack->album();
+
+		RemoteTrack *templateTrack = _cache.value(albumID);
 		while (!xml.atEnd() && !xml.hasError()) {
 			QXmlStreamReader::TokenType token = xml.readNext();
 			if (token == QXmlStreamReader::StartElement) {
@@ -347,21 +366,27 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 					track.setIcon(icon);
 					track.setYear(templateTrack->year().left(4));
 					tracks.push_back(std::move(track));
+					// qDebug() << track.title() << "from album" << track.album();
 				}
 			}
 		}
+		/// XXX: this is really a big mess mixing updating cache and UI actions
 		if (_repliesWhichInteractWithUi.contains(reply)) {
 			Reply value = _repliesWhichInteractWithUi.value(reply);
 			switch (value) {
 			case RPL_SendToCurrentPlaylist:
 				emit aboutToProcessRemoteTracks(tracks);
 				break;
-			case RPL_UpdateCacheDatabase:
-				this->updateCacheDatabase(tracks);
-				break;
+
+			//case RPL_UpdateCacheDatabase:
+			//	this->updateCacheDatabase(tracks);
+			//	break;
 			}
+			qDebug() << "removing reply" << reply->url();
 			_repliesWhichInteractWithUi.remove(reply);
 			delete reply;
+		} else {
+			this->updateCacheDatabase(tracks);
 		}
 	}
 }
@@ -394,8 +419,13 @@ void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
 /** Display everything! */
 void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 {
-	qDebug() << Q_FUNC_INFO << reply->request().url();
-	qDebug() << Q_FUNC_INFO << reply->url();
+	// qDebug() << Q_FUNC_INFO << reply->request().url();
+	// qDebug() << Q_FUNC_INFO << reply->url();
+	if (reply->operation() == QNetworkAccessManager::GetOperation) {
+		NetworkAccessManager *inst = NetworkAccessManager::getInstance();
+		inst->getCount--;
+		qDebug() << Q_FUNC_INFO << inst->getCount;
+	}
 
 	QNetworkRequest request = reply->request();
 	QString r = request.url().toDisplayString();
@@ -420,7 +450,8 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 	//} else if (r.startsWith("http://api.deezer.com/user/me/radio")) {
 	//} else if (r.startsWith("http://api.deezer.com/user/me/tracks")) {
 	} else if (r.startsWith("http://api.deezer.com/artist/")) {
-		this->extractAlbumListFromArtist(reply, xml);
+		int slash = r.indexOf("/", 29);
+		this->extractAlbumListFromArtist(reply, r.mid(29, slash - 29), xml);
 	} else if (r.startsWith("http://api.deezer.com/search/artist/")) {
 		/// TODO
 	} else if (r.startsWith("http://api.deezer.com/search/album/")) {
@@ -524,9 +555,11 @@ void DeezerPlugin::updateCacheDatabase(const std::list<RemoteTrack> &tracks)
 	for (std::list<RemoteTrack>::const_iterator it = tracks.cbegin(); it != tracks.cend(); ++it) {
 		RemoteTrack track = *it;
 		QSqlQuery insert(_db);
-		insert.prepare("INSERT INTO tracks (id, name) VALUES (?, ?)");
+		insert.prepare("INSERT INTO tracks (id, name, artist, album) VALUES (?, ?, ?, ?)");
 		insert.addBindValue(track.id());
 		insert.addBindValue(track.title());
+		insert.addBindValue(track.artist());
+		insert.addBindValue(track.album());
 		if (insert.exec()) {
 			qDebug() << track.title() << "has been added to local deezer cache";
 		}

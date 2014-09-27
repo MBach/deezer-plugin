@@ -71,20 +71,20 @@ WebPage::WebPage(QObject *parent)
 
 bool WebPage::acceptNavigationRequest(QWebFrame *, const QNetworkRequest &request, NavigationType)
 {
-	qDebug() << "acceptNavigationRequest" << request.url();
+	// qDebug() << "acceptNavigationRequest" << request.url();
 	if (request.url().toString().contains("access_token=")) {
 		QString r = request.url().toString();
 		int i = r.indexOf("access_token=");
 		int j = r.mid(i + 13).indexOf('&');
 		QString t = r.mid(i + 13, j);
-		qDebug() << "token 1:" << t;
+		// qDebug() << "token 1:" << t;
 		if (_hasToken == false) {
-			qDebug() << "token 2:" << t;
+			// qDebug() << "token 2:" << t;
 			WebView *view = qobject_cast<WebView*>(this->view());
 			if (view) {
 				view->setToken(t);
-			} else {
-				qDebug() << "no view ?";
+			//} else {
+			//	qDebug() << "no view ?";
 			}
 			//emit tokenFound(t);
 			_hasToken = true;

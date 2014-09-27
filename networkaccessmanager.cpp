@@ -65,13 +65,12 @@
 
 NetworkAccessManager* NetworkAccessManager::networkAccessManager = NULL;
 
-int NetworkAccessManager::pendingRequests = 0;
-
 NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	: QNetworkAccessManager(parent),
 	requestFinishedCount(0), requestFinishedFromCacheCount(0), requestFinishedPipelinedCount(0),
 	requestFinishedSecureCount(0), requestFinishedDownloadBufferCount(0)
 {
+	getCount = 0;
 	//connect(this, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)), SLOT(authenticationRequired(QNetworkReply*,QAuthenticator*)));
 	//connect(this, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)), SLOT(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)));
 	//connect(this, &QNetworkAccessManager::finished, this, &NetworkAccessManager::requestFinished);
@@ -106,20 +105,26 @@ QNetworkReply* NetworkAccessManager::createRequest(Operation op, const QNetworkR
 	//	this->thread()->sleep(1);
 	//}
 	QNetworkRequest request = req; // copy so we can modify
-	qDebug() << "create request" << pendingRequests;
 
 	// this is a temporary hack until we properly use the pipelining flags from QtWebkit
 	// pipeline everything! :)
 	request.setAttribute(QNetworkRequest::HttpPipeliningAllowedAttribute, true);
-	QNetworkReply *r = QNetworkAccessManager::createRequest(op, request, outgoingData);
 	//pendingRequests++;
-	return r;
+
+	//if (getCount > 5) {
+	//	qDebug() << Q_FUNC_INFO << "too much request right now, queue and wait!";
+	//	//_queue.
+	//	return NULL;
+	//} else {
+		QNetworkReply *r = QNetworkAccessManager::createRequest(op, request, outgoingData);
+		return r;
+	//}
 }
 
 QNetworkReply * NetworkAccessManager::get(const QNetworkRequest & request)
 {
-	static int getCount = 0;
 	qDebug() << Q_FUNC_INFO << ++getCount;
+
 	return QNetworkAccessManager::get(request);
 }
 
