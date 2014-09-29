@@ -41,11 +41,6 @@
 
 #include "networkaccessmanager.h"
 
-//#include "browserapplication.h"
-//#include "browsermainwindow.h"
-//#include "ui_passworddialog.h"
-//#include "ui_proxy.h"
-
 #include <QtCore/QSettings>
 
 #include <QtGui/QDesktopServices>
@@ -70,12 +65,6 @@ NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	requestFinishedCount(0), requestFinishedFromCacheCount(0), requestFinishedPipelinedCount(0),
 	requestFinishedSecureCount(0), requestFinishedDownloadBufferCount(0)
 {
-	getCount = 0;
-	//connect(this, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)), SLOT(authenticationRequired(QNetworkReply*,QAuthenticator*)));
-	//connect(this, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)), SLOT(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)));
-	//connect(this, &QNetworkAccessManager::finished, this, &NetworkAccessManager::requestFinished);
-
-	//connect(this, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)), SLOT(sslErrors(QNetworkReply*,QList<QSslError>)));
 	connect(this, &QNetworkAccessManager::sslErrors, this, &NetworkAccessManager::ignoreSslErrors);
 
 	loadSettings();
@@ -96,72 +85,14 @@ NetworkAccessManager* NetworkAccessManager::getInstance()
 
 QNetworkReply* NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & req, QIODevice * outgoingData)
 {
-	/*while (pendingRequests > 4) {
-		qDebug() << "waiting for 1 second";
-		this->thread()->sleep(1);
-	}*/
-	//if (pendingRequests > 4) {
-	//	qDebug() << "waiting for 1 second";
-	//	this->thread()->sleep(1);
-	//}
 	QNetworkRequest request = req; // copy so we can modify
 
 	// this is a temporary hack until we properly use the pipelining flags from QtWebkit
 	// pipeline everything! :)
 	request.setAttribute(QNetworkRequest::HttpPipeliningAllowedAttribute, true);
-	//pendingRequests++;
 
-	//if (getCount > 5) {
-	//	qDebug() << Q_FUNC_INFO << "too much request right now, queue and wait!";
-	//	//_queue.
-	//	return NULL;
-	//} else {
-		QNetworkReply *r = QNetworkAccessManager::createRequest(op, request, outgoingData);
-		return r;
-	//}
-}
-
-QNetworkReply * NetworkAccessManager::get(const QNetworkRequest & request)
-{
-	qDebug() << Q_FUNC_INFO << ++getCount;
-
-	return QNetworkAccessManager::get(request);
-}
-
-QNetworkReply * NetworkAccessManager::post(const QNetworkRequest & request, QIODevice * data)
-{
-	qDebug() << Q_FUNC_INFO;
-	return QNetworkAccessManager::post(request, data);
-}
-
-QNetworkReply * NetworkAccessManager::post(const QNetworkRequest & request, const QByteArray & data)
-{
-	qDebug() << Q_FUNC_INFO;
-	return QNetworkAccessManager::post(request, data);
-}
-
-QNetworkReply * NetworkAccessManager::post(const QNetworkRequest & request, QHttpMultiPart * multiPart)
-{
-	qDebug() << Q_FUNC_INFO;
-	return QNetworkAccessManager::post(request, multiPart);
-}
-
-QNetworkReply * NetworkAccessManager::put(const QNetworkRequest & request, QIODevice * data)
-{
-	qDebug() << Q_FUNC_INFO;
-	return QNetworkAccessManager::put(request, data);
-}
-
-QNetworkReply * NetworkAccessManager::put(const QNetworkRequest & request, QHttpMultiPart * multiPart)
-{
-	qDebug() << Q_FUNC_INFO;
-	return QNetworkAccessManager::put(request, multiPart);
-}
-
-QNetworkReply * NetworkAccessManager::put(const QNetworkRequest & request, const QByteArray & data)
-{
-	qDebug() << Q_FUNC_INFO;
-	return QNetworkAccessManager::put(request, data);
+	QNetworkReply *r = QNetworkAccessManager::createRequest(op, request, outgoingData);
+	return r;
 }
 
 void NetworkAccessManager::loadSettings()

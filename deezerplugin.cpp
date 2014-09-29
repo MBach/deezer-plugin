@@ -137,8 +137,8 @@ void DeezerPlugin::sync(const QString &token) const
 		// First, get checksum for Artists, Albums and Playlists
 		/// TODO: playlists, albums (followers?)
 		NetworkAccessManager *inst = NetworkAccessManager::getInstance();
-		inst->getCount = 0;
 		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + token)));
+		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/playlists?output=xml&access_token=" + token)));
 	}
 }
 
@@ -220,7 +220,6 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 
 void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QString &artistId, QXmlStreamReader &xml)
 {
-	qDebug() << Q_FUNC_INFO << reply->url();
 	QList<RemoteTrack*> albums;
 	Settings *settings = Settings::getInstance();
 	while(!xml.atEnd() && !xml.hasError()) {
@@ -339,9 +338,102 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 	}
 }
 
+void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
+{
+	qDebug() << Q_FUNC_INFO;
+	Settings *settings = Settings::getInstance();
+	bool needToSyncPlaylists = false;
+	QVariant checkSum = settings->value("DeezerPlugin/playlists/checksum");
+	QString sum;
+	QList<RemoteTrack> playlists;
+	while(!xml.atEnd() && !xml.hasError()) {
+		QXmlStreamReader::TokenType token = xml.readNext();
+		if (token == QXmlStreamReader::StartElement) {
+			if (xml.name() == "playlist") {
+				/// XXX: name of class!
+				RemoteTrack playlist;
+				playlist.setId(this->extract(xml, "id"));
+				playlist.setTitle(this->extract(xml, "title"));
+				playlist.setLength(this->extract(xml, "duration"));
+				// playlist.setChecksum(this->extract(xml, "checksum"));
+				playlists.append(playlist);
+			}
+			if (xml.name() == "checksum") {
+				sum = xml.readElementText();
+				// Out of sync
+				if (checkSum.isNull() || checkSum.toString() != sum) {
+					needToSyncPlaylists = true;
+					qDebug() << "needToSyncPlaylists" << needToSyncPlaylists;
+				}
+			}
+		}
+	}
+	if (needToSyncPlaylists || _db.isEmpty()) {
+		qDebug() << "_db.isEmpty()" << _db.isEmpty();
+		if (_db.open()) {
+			qDebug() << "_db.open()" << playlists.size();
+			_db.exec("DELETE FROM playlists");
+			bool ok = true;
+			for (int i = 0; i < playlists.size(); i++) {
+				RemoteTrack playlist = playlists.at(i);
+				QSqlQuery insert(_db);
+				insert.prepare("INSERT INTO playlists(id, title, duration) VALUES (?, ?, ?)");
+				insert.addBindValue(playlist.id());
+				insert.addBindValue(playlist.title());
+				insert.addBindValue(playlist.length());
+				/// Forward tracklist
+				if (insert.exec()) {
+					QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/tracks?output=xml"));
+					/*QNetworkReply *reply = */ NetworkAccessManager::getInstance()->get(r);
+					//_repliesWhichInteractWithUi.insert(reply, RPL_UpdateCacheDatabase);
+				} else {
+					ok = false;
+					qDebug() << "couldn't insert playlist :(" << playlist.title();
+				}
+			}
+			_db.close();
+			if (ok) {
+				qDebug() << "sum" << sum;
+				settings->setValue("DeezerPlugin/playlists/checksum", sum);
+			}
+		}
+	} else {
+		qDebug() << "playlists are synchronized!";
+	}
+}
+
+void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlistId, QXmlStreamReader &xml, int index)
+{
+	qDebug() << Q_FUNC_INFO;
+	std::list<RemoteTrack> tracks;
+	while (!xml.atEnd() && !xml.hasError()) {
+		QXmlStreamReader::TokenType token = xml.readNext();
+		if (token == QXmlStreamReader::StartElement) {
+			if (xml.name() == "track") {
+				RemoteTrack track;
+				track.setId(this->extract(xml, "id"));
+				track.setTitle(this->extract(xml, "title"));
+				track.setUrl(this->extract(xml, "link"));
+				track.setLength(this->extract(xml, "duration"));
+				// in node <artist></artist>
+				track.setArtist(this->extract(xml, "name"));
+				// in node <album></album>
+				track.setAlbum(this->extract(xml, "title"));
+				tracks.push_back(std::move(track));
+			} else if (xml.name() == "next") {
+				if (index == 0) {
+					index += 50;
+				}
+				QString url = "http://api.deezer.com/playlist/" + playlistId + "/tracks/?output=xml&index=" + QString::number(index);
+				NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl(url)));
+			}
+		}
+	}
+	this->updateTablePlaylistTracks(playlistId, tracks);
+}
+
 void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml)
 {
-	qDebug() << Q_FUNC_INFO << reply->url() << "readable?" << reply->isReadable();
 	static QIcon icon(":/icon");
 	std::list<RemoteTrack> tracks;
 	if (_cache.contains(albumID)) {
@@ -366,7 +458,6 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 					track.setIcon(icon);
 					track.setYear(templateTrack->year().left(4));
 					tracks.push_back(std::move(track));
-					// qDebug() << track.title() << "from album" << track.album();
 				}
 			}
 		}
@@ -386,7 +477,7 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 			_repliesWhichInteractWithUi.remove(reply);
 			delete reply;
 		} else {
-			this->updateCacheDatabase(tracks);
+			this->updateTableTracks(tracks);
 		}
 	}
 }
@@ -419,14 +510,6 @@ void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
 /** Display everything! */
 void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 {
-	// qDebug() << Q_FUNC_INFO << reply->request().url();
-	// qDebug() << Q_FUNC_INFO << reply->url();
-	if (reply->operation() == QNetworkAccessManager::GetOperation) {
-		NetworkAccessManager *inst = NetworkAccessManager::getInstance();
-		inst->getCount--;
-		qDebug() << Q_FUNC_INFO << inst->getCount;
-	}
-
 	QNetworkRequest request = reply->request();
 	QString r = request.url().toDisplayString();
 	QXmlStreamReader xml(reply->readAll());
@@ -443,7 +526,17 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 		this->extractSynchronizedArtists(xml);
 	/// TODO !?
 	//} else if (r.startsWith("http://api.deezer.com/user/me/albums")) {
-	//} else if (r.startsWith("http://api.deezer.com/user/me/playlists")) {
+	} else if (r.startsWith("http://api.deezer.com/user/me/playlists")) {
+		this->extractSynchronizedPlaylists(xml);
+	} else if (r.startsWith("http://api.deezer.com/playlist/")) {
+		int slash = r.indexOf("/", 31);
+		QString playlistId = r.mid(31, slash - 31);
+		int index = 0;
+		if (r.contains("&index=")) {
+			int equal = r.lastIndexOf("=");
+			index = r.mid(equal + 1).toInt();
+		}
+		this->extractSynchronizedTracksFromPlaylists(playlistId, xml, index);
 	//} else if (r.startsWith("http://api.deezer.com/user/me/flow")) {
 	//} else if (r.startsWith("http://api.deezer.com/user/me/following")) {
 	//} else if (r.startsWith("http://api.deezer.com/user/me/followers")) {
@@ -545,9 +638,8 @@ void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
 	emit searchComplete(AbstractSearchDialog::Album, results);
 }
 
-void DeezerPlugin::updateCacheDatabase(const std::list<RemoteTrack> &tracks)
+void DeezerPlugin::updateTableTracks(const std::list<RemoteTrack> &tracks)
 {
-	qDebug() << Q_FUNC_INFO;
 	if (!_db.isOpen()) {
 		_db.open();
 	}
@@ -560,9 +652,28 @@ void DeezerPlugin::updateCacheDatabase(const std::list<RemoteTrack> &tracks)
 		insert.addBindValue(track.title());
 		insert.addBindValue(track.artist());
 		insert.addBindValue(track.album());
-		if (insert.exec()) {
-			qDebug() << track.title() << "has been added to local deezer cache";
-		}
+		insert.exec();
+	}
+	_db.close();
+}
+
+void DeezerPlugin::updateTablePlaylistTracks(const QString &playlistId, const std::list<RemoteTrack> &tracks)
+{
+	if (!_db.isOpen()) {
+		_db.open();
+	}
+
+	for (std::list<RemoteTrack>::const_iterator it = tracks.cbegin(); it != tracks.cend(); ++it) {
+		RemoteTrack track = *it;
+		QSqlQuery insert(_db);
+		insert.prepare("INSERT INTO playlistTracks (id, title, duration, artist, album, playlistId) VALUES (?, ?, ?, ?, ?, ?)");
+		insert.addBindValue(track.id());
+		insert.addBindValue(track.title());
+		insert.addBindValue(track.length());
+		insert.addBindValue(track.artist());
+		insert.addBindValue(track.album());
+		insert.addBindValue(playlistId);
+		insert.exec();
 	}
 	_db.close();
 }

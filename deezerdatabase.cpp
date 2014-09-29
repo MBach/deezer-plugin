@@ -28,7 +28,8 @@ DeezerDatabase::DeezerDatabase()
 		exec("CREATE TABLE IF NOT EXISTS artists (id INT PRIMARY KEY, name varchar(255))");
 		exec("CREATE TABLE IF NOT EXISTS albums (id INT PRIMARY KEY, name varchar(255), cover varchar(255), artist varchar(255))");
 		exec("CREATE TABLE IF NOT EXISTS tracks (id INT PRIMARY KEY, name varchar(255), artist varchar(255), album varchar(255))");
-		exec("CREATE TABLE IF NOT EXISTS playlists (id INT PRIMARY KEY, name varchar(255))");
+		exec("CREATE TABLE IF NOT EXISTS playlists (id INT PRIMARY KEY, title varchar(255), duration INT, checksum varchar(255))");
+		exec("CREATE TABLE IF NOT EXISTS playlistTracks (id INT PRIMARY KEY, title varchar(255), duration INTEGER, artist varchar(255), album varchar(255), playlistId INTEGER, FOREIGN KEY(playlistId) REFERENCES playlists(id) ON DELETE CASCADE)");
 		exec("CREATE INDEX IF NOT EXISTS indexArtists ON artists (id)");
 		exec("CREATE INDEX IF NOT EXISTS indexAlbums ON albums (id)");
 		exec("CREATE INDEX IF NOT EXISTS indexTracks ON tracks (id)");

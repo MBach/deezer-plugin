@@ -84,9 +84,12 @@ private:
 	void extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml);
 	void extractAlbumListFromArtist(QNetworkReply *reply, const QString &artistId, QXmlStreamReader &xml);
 	void extractSynchronizedArtists(QXmlStreamReader &xml);
+	void extractSynchronizedPlaylists(QXmlStreamReader &xml);
+	void extractSynchronizedTracksFromPlaylists(const QString &playlistId, QXmlStreamReader &xml, int index = 0);
 	void extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml);
 	void searchRequestFinished(QXmlStreamReader &xml);
-	void updateCacheDatabase(const std::list<RemoteTrack> &tracks);
+	void updateTableTracks(const std::list<RemoteTrack> &tracks);
+	void updateTablePlaylistTracks(const QString &playlistId, const std::list<RemoteTrack> &tracks);
 
 private slots:
 	/** TODO. */

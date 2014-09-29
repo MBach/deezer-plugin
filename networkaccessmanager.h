@@ -45,8 +45,6 @@
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkRequest>
 
-#include <QQueue>
-
 class NetworkAccessManager : public QNetworkAccessManager
 {
 	Q_OBJECT
@@ -57,19 +55,7 @@ public:
 	/** Singleton Pattern to easily use Settings everywhere in the app. */
 	static NetworkAccessManager* getInstance();
 
-	virtual QNetworkReply* createRequest ( Operation op, const QNetworkRequest & req, QIODevice * outgoingData = 0 );
-
-	int getCount;
-
-	QQueue<QNetworkRequest> _queue;
-
-	QNetworkReply * get(const QNetworkRequest & request);
-	QNetworkReply * post(const QNetworkRequest & request, QIODevice * data);
-	QNetworkReply * post(const QNetworkRequest & request, const QByteArray & data);
-	QNetworkReply * post(const QNetworkRequest & request, QHttpMultiPart * multiPart);
-	QNetworkReply * put(const QNetworkRequest & request, QIODevice * data);
-	QNetworkReply * put(const QNetworkRequest & request, QHttpMultiPart * multiPart);
-	QNetworkReply * put(const QNetworkRequest & request, const QByteArray & data);
+	virtual QNetworkReply* createRequest (Operation op, const QNetworkRequest & req, QIODevice * outgoingData = 0 );
 
 private:
 	QList<QString> sslTrustedHostList;
