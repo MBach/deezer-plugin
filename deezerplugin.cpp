@@ -4,6 +4,7 @@
 #include "cookiejar.h"
 #include "networkaccessmanager.h"
 #include "abstractsearchdialog.h"
+#include "model/remoteplaylist.h"
 
 #include <QDesktopServices>
 #include <QDir>
@@ -127,6 +128,8 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 	connect(_tracks, &QListView::doubleClicked, this, &DeezerPlugin::trackWasDoubleClicked);
 }
 
+#include <QTimer>
+
 /** Redefined. */
 void DeezerPlugin::sync(const QString &token) const
 {
@@ -240,13 +243,16 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 			}
 		}
 	}
-	if (_db.open() && !albums.isEmpty()) {
-		QSqlQuery qArtistName = _db.exec("SELECT name FROM artists WHERE id = " + artistId);
+	if (_dzDb.open()) {
+		if (albums.isEmpty()) {
+			qDebug() << "album list is empty?";
+		}
+		QSqlQuery qArtistName = _dzDb.exec("SELECT name FROM artists WHERE id = " + artistId);
 		qArtistName.next();
 		QString artist = qArtistName.record().value(0).toString();
 		for (int i = 0; i < albums.size(); i++) {
 			RemoteTrack *album = albums.at(i);
-			QSqlQuery insert(_db);
+			QSqlQuery insert(_dzDb);
 			insert.prepare("INSERT INTO albums(id, name, cover, artist) VALUES (?, ?, ?, ?)");
 			insert.addBindValue(album->id());
 			insert.addBindValue(album->album());
@@ -273,7 +279,7 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 	} else {
 		qDebug() << "couldn't open database";
 	}
-	_db.close();
+	_dzDb.close();
 }
 
 void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
@@ -303,18 +309,18 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 			}
 		}
 	}
-	if (needToSyncArtists || _db.isEmpty()) {
-		qDebug() << "_db.isEmpty()" << _db.isEmpty();
-		if (_db.open()) {
+	if (needToSyncArtists || _dzDb.isEmpty()) {
+		qDebug() << "_db.isEmpty()" << _dzDb.isEmpty();
+		if (_dzDb.open()) {
 			qDebug() << "_db.open()" << artists.size();
-			QSqlQuery truncate(_db);
+			QSqlQuery truncate(_dzDb);
 			if (!truncate.exec("DELETE FROM artists")) {
 				qDebug() << "couldn't truncate table artists :(";
 			}
 			bool ok = true;
 			for (int i = 0; i < artists.size(); i++) {
 				RemoteTrack artist = artists.at(i);
-				QSqlQuery insert(_db);
+				QSqlQuery insert(_dzDb);
 				insert.prepare("INSERT INTO artists(id, name) VALUES (?, ?)");
 				insert.addBindValue(artist.id());
 				insert.addBindValue(artist.artist());
@@ -327,7 +333,7 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 					qDebug() << "couldn't insert artist :(" << artist.artist();
 				}
 			}
-			_db.close();
+			_dzDb.close();
 			if (ok) {
 				qDebug() << "sum" << sum;
 				settings->setValue("DeezerPlugin/artists/checksum", sum);
@@ -345,57 +351,43 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 	bool needToSyncPlaylists = false;
 	QVariant checkSum = settings->value("DeezerPlugin/playlists/checksum");
 	QString sum;
-	QList<RemoteTrack> playlists;
+	QList<RemotePlaylist> playlists;
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "playlist") {
-				/// XXX: name of class!
-				RemoteTrack playlist;
+				RemotePlaylist playlist;
 				playlist.setId(this->extract(xml, "id"));
 				playlist.setTitle(this->extract(xml, "title"));
 				playlist.setLength(this->extract(xml, "duration"));
-				// playlist.setChecksum(this->extract(xml, "checksum"));
+				playlist.setChecksum(this->extract(xml, "checksum"));
+				qDebug() << "appending" << playlist.title() << playlist.checksum();
 				playlists.append(playlist);
-			}
-			if (xml.name() == "checksum") {
+			} else if (xml.name() == "checksum") {
 				sum = xml.readElementText();
 				// Out of sync
 				if (checkSum.isNull() || checkSum.toString() != sum) {
 					needToSyncPlaylists = true;
-					qDebug() << "needToSyncPlaylists" << needToSyncPlaylists;
 				}
 			}
 		}
 	}
-	if (needToSyncPlaylists || _db.isEmpty()) {
-		qDebug() << "_db.isEmpty()" << _db.isEmpty();
-		if (_db.open()) {
-			qDebug() << "_db.open()" << playlists.size();
-			_db.exec("DELETE FROM playlists");
-			bool ok = true;
-			for (int i = 0; i < playlists.size(); i++) {
-				RemoteTrack playlist = playlists.at(i);
-				QSqlQuery insert(_db);
-				insert.prepare("INSERT INTO playlists(id, title, duration) VALUES (?, ?, ?)");
-				insert.addBindValue(playlist.id());
-				insert.addBindValue(playlist.title());
-				insert.addBindValue(playlist.length());
-				/// Forward tracklist
-				if (insert.exec()) {
-					QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/tracks?output=xml"));
-					/*QNetworkReply *reply = */ NetworkAccessManager::getInstance()->get(r);
-					//_repliesWhichInteractWithUi.insert(reply, RPL_UpdateCacheDatabase);
-				} else {
-					ok = false;
-					qDebug() << "couldn't insert playlist :(" << playlist.title();
-				}
+	if (needToSyncPlaylists) {
+		_db.removePlaylists(playlists);
+		bool ok = true;
+		for (int i = 0; i < playlists.size(); i++) {
+			RemotePlaylist playlist = playlists.at(i);
+			// Forward tracklist
+			if (_db.insertIntoTablePlaylists(playlist)) {
+				QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/tracks?output=xml"));
+				QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
+				_pendingRequest.append(reply);
+			} else {
+				ok = false;
 			}
-			_db.close();
-			if (ok) {
-				qDebug() << "sum" << sum;
-				settings->setValue("DeezerPlugin/playlists/checksum", sum);
-			}
+		}
+		if (ok) {
+			settings->setValue("DeezerPlugin/playlists/checksum", sum);
 		}
 	} else {
 		qDebug() << "playlists are synchronized!";
@@ -429,7 +421,7 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 			}
 		}
 	}
-	this->updateTablePlaylistTracks(playlistId, tracks);
+	_db.insertIntoTablePlaylistTracks(playlistId.toInt(), tracks);
 }
 
 void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml)
@@ -640,13 +632,14 @@ void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
 
 void DeezerPlugin::updateTableTracks(const std::list<RemoteTrack> &tracks)
 {
-	if (!_db.isOpen()) {
-		_db.open();
+	if (!_dzDb.isOpen()) {
+		_dzDb.open();
 	}
 
+	_dzDb.exec("BEGIN TRANSACTION");
 	for (std::list<RemoteTrack>::const_iterator it = tracks.cbegin(); it != tracks.cend(); ++it) {
 		RemoteTrack track = *it;
-		QSqlQuery insert(_db);
+		QSqlQuery insert(_dzDb);
 		insert.prepare("INSERT INTO tracks (id, name, artist, album) VALUES (?, ?, ?, ?)");
 		insert.addBindValue(track.id());
 		insert.addBindValue(track.title());
@@ -654,28 +647,8 @@ void DeezerPlugin::updateTableTracks(const std::list<RemoteTrack> &tracks)
 		insert.addBindValue(track.album());
 		insert.exec();
 	}
-	_db.close();
-}
-
-void DeezerPlugin::updateTablePlaylistTracks(const QString &playlistId, const std::list<RemoteTrack> &tracks)
-{
-	if (!_db.isOpen()) {
-		_db.open();
-	}
-
-	for (std::list<RemoteTrack>::const_iterator it = tracks.cbegin(); it != tracks.cend(); ++it) {
-		RemoteTrack track = *it;
-		QSqlQuery insert(_db);
-		insert.prepare("INSERT INTO playlistTracks (id, title, duration, artist, album, playlistId) VALUES (?, ?, ?, ?, ?, ?)");
-		insert.addBindValue(track.id());
-		insert.addBindValue(track.title());
-		insert.addBindValue(track.length());
-		insert.addBindValue(track.artist());
-		insert.addBindValue(track.album());
-		insert.addBindValue(playlistId);
-		insert.exec();
-	}
-	_db.close();
+	_dzDb.exec("COMMIT TRANSACTION");
+	_dzDb.close();
 }
 
 void DeezerPlugin::trackWasDoubleClicked(const QModelIndex &index)

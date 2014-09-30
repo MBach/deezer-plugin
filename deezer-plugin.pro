@@ -20,7 +20,10 @@ CONFIG(release, debug|release) {
 
 INSTALLS += target
 
-HEADERS += model/remotetrack.h \
+HEADERS += model/remoteobject.h \
+    model/remoteplaylist.h \
+    model/remotetrack.h \
+    model/sqldatabase.h \
     abstractsearchdialog.h \
     autosaver.h \
     basicplugin.h \
@@ -36,8 +39,7 @@ HEADERS += model/remotetrack.h \
     settings.h \
     webview.h
 
-SOURCES += model/remotetrack.cpp \
-    autosaver.cpp \
+SOURCES += autosaver.cpp \
     cookiejar.cpp \
     deezerdatabase.cpp \
     deezerplugin.cpp \

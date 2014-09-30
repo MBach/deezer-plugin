@@ -11,6 +11,7 @@
 #include "ui_config.h"
 #include "deezerdatabase.h"
 #include "deezerwebplayer.h"
+#include "model/sqldatabase.h"
 
 class QWebView;
 
@@ -40,9 +41,13 @@ private:
 	QListView *_tracks;
 	QCheckBox *_checkBox;
 	DeezerWebPlayer *_webPlayer;
-	DeezerDatabase _db;
+
+	DeezerDatabase _dzDb;
+	SqlDatabase _db;
+
 	QMap<QString, RemoteTrack*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
+	QList<QNetworkReply*> _pendingRequest;
 
 public:
 	/** Default constructor. */
@@ -89,7 +94,6 @@ private:
 	void extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml);
 	void searchRequestFinished(QXmlStreamReader &xml);
 	void updateTableTracks(const std::list<RemoteTrack> &tracks);
-	void updateTablePlaylistTracks(const QString &playlistId, const std::list<RemoteTrack> &tracks);
 
 private slots:
 	/** TODO. */
