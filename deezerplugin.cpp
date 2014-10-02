@@ -377,6 +377,7 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 		bool ok = true;
 		for (int i = 0; i < playlists.size(); i++) {
 			RemotePlaylist playlist = playlists.at(i);
+			playlist.setIcon(QIcon(":/icon"));
 			// Forward tracklist
 			if (_db.insertIntoTablePlaylists(playlist)) {
 				QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/tracks?output=xml"));
@@ -407,8 +408,10 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 				track.setTitle(this->extract(xml, "title"));
 				track.setUrl(this->extract(xml, "link"));
 				track.setLength(this->extract(xml, "duration"));
+
 				// in node <artist></artist>
 				track.setArtist(this->extract(xml, "name"));
+
 				// in node <album></album>
 				track.setAlbum(this->extract(xml, "title"));
 				tracks.push_back(std::move(track));

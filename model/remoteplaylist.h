@@ -2,6 +2,7 @@
 #define REMOTEPLAYLIST_H
 
 #include "remoteobject.h"
+#include <QIcon>
 
 /**
  * \brief		The RemotePlaylist class is a simple wrapper which contains basic informations about a playlist.
@@ -10,22 +11,26 @@
  */
 class MIAMCORE_LIBRARY RemotePlaylist : public RemoteObject
 {
-	Q_OBJECT
+    Q_OBJECT
 private:
-	QString _length, _title;
+    QString _length, _title;
+    QIcon _icon;
 
 public:
-	explicit RemotePlaylist(QObject *parent = 0);
+    explicit RemotePlaylist(QObject *parent = 0);
 
-	RemotePlaylist(const RemotePlaylist &remotePlaylist);
+    RemotePlaylist(const RemotePlaylist &remotePlaylist);
 
-	virtual ~RemotePlaylist();
+    virtual ~RemotePlaylist();
 
-	QString length() const;
-	void setLength(const QString &length);
+    QIcon icon() const;
+    void setIcon(const QIcon &icon);
 
-	QString title() const;
-	void setTitle(const QString &title);
+    QString length() const;
+    void setLength(const QString &length);
+
+    QString title() const;
+    void setTitle(const QString &title);
 };
 
 #endif // REMOTEPLAYLIST_H

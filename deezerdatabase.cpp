@@ -28,12 +28,13 @@ DeezerDatabase::DeezerDatabase()
 		exec("PRAGMA synchronous = OFF");
 		exec("PRAGMA journal_mode = MEMORY");
 		exec("PRAGMA temp_store = MEMORY");
-		exec("CREATE TABLE IF NOT EXISTS artists (id INTEGER PRIMARY KEY, name varchar(255))");
-		exec("CREATE TABLE IF NOT EXISTS albums (id INTEGER PRIMARY KEY, name varchar(255), cover varchar(255), artist varchar(255))");
-		exec("CREATE TABLE IF NOT EXISTS tracks (id INTEGER PRIMARY KEY, name varchar(255), artist varchar(255), album varchar(255))");
-		exec("CREATE INDEX IF NOT EXISTS indexArtists ON artists (id)");
-		exec("CREATE INDEX IF NOT EXISTS indexAlbums ON albums (id)");
-		exec("CREATE INDEX IF NOT EXISTS indexTracks ON tracks (id)");
+		exec("CREATE TABLE IF NOT EXISTS artists (id INTEGER, name varchar(255))");
+		exec("CREATE TABLE IF NOT EXISTS albums (id INTEGER, name varchar(255), cover varchar(255), artist varchar(255))");
+		exec("CREATE TABLE IF NOT EXISTS tracks (id INTEGER, name varchar(255), artist varchar(255), album varchar(255))");
+		// Are indexes useless? We can suppose that remote ID are already unique
+		// exec("CREATE INDEX IF NOT EXISTS indexArtists ON artists (id)");
+		// exec("CREATE INDEX IF NOT EXISTS indexAlbums ON albums (id)");
+		// exec("CREATE INDEX IF NOT EXISTS indexTracks ON tracks (id)");
 		close();
 	}
 }
