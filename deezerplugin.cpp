@@ -4,7 +4,7 @@
 #include "cookiejar.h"
 #include "networkaccessmanager.h"
 #include "abstractsearchdialog.h"
-#include "model/remoteplaylist.h"
+#include "model/playlistdao.h"
 
 #include <QDesktopServices>
 #include <QDir>
@@ -178,7 +178,7 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 	QString artist;
 	QString album;
 	QString year;
-	RemoteTrack *track = new RemoteTrack;
+	TrackDAO *track = new TrackDAO;
 	while (!xml.atEnd() && !xml.hasError()) {
 
 		QXmlStreamReader::TokenType token = xml.readNext();
@@ -223,13 +223,13 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 
 void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QString &artistId, QXmlStreamReader &xml)
 {
-	QList<RemoteTrack*> albums;
+	QList<TrackDAO*> albums;
 	Settings *settings = Settings::getInstance();
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "album") {
-				RemoteTrack *album = new RemoteTrack;
+				TrackDAO *album = new TrackDAO;
 				QString record_type;
 				album->setId(this->extract(xml, "id"));
 				album->setAlbum(this->extract(xml, "title"));
@@ -251,7 +251,7 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 		qArtistName.next();
 		QString artist = qArtistName.record().value(0).toString();
 		for (int i = 0; i < albums.size(); i++) {
-			RemoteTrack *album = albums.at(i);
+			TrackDAO *album = albums.at(i);
 			QSqlQuery insert(_dzDb);
 			insert.prepare("INSERT INTO albums(id, name, cover, artist) VALUES (?, ?, ?, ?)");
 			insert.addBindValue(album->id());
@@ -289,12 +289,12 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 	bool needToSyncArtists = false;
 	QVariant checkSum = settings->value("DeezerPlugin/artists/checksum");
 	QString sum;
-	QList<RemoteTrack> artists;
+	QList<TrackDAO> artists;
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "artist") {
-				RemoteTrack artist;
+				TrackDAO artist;
 				artist.setId(this->extract(xml, "id"));
 				artist.setArtist(this->extract(xml, "name"));
 				artists.append(artist);
@@ -319,7 +319,7 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 			}
 			bool ok = true;
 			for (int i = 0; i < artists.size(); i++) {
-				RemoteTrack artist = artists.at(i);
+				TrackDAO artist = artists.at(i);
 				QSqlQuery insert(_dzDb);
 				insert.prepare("INSERT INTO artists(id, name) VALUES (?, ?)");
 				insert.addBindValue(artist.id());
@@ -351,12 +351,12 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 	bool needToSyncPlaylists = false;
 	QVariant checkSum = settings->value("DeezerPlugin/playlists/checksum");
 	QString sum;
-	QList<RemotePlaylist> playlists;
+	QList<PlaylistDAO> playlists;
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "playlist") {
-				RemotePlaylist playlist;
+				PlaylistDAO playlist;
 				playlist.setId(this->extract(xml, "id"));
 				playlist.setTitle(this->extract(xml, "title"));
 				playlist.setLength(this->extract(xml, "duration"));
@@ -376,7 +376,7 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 		_db.removePlaylists(playlists);
 		bool ok = true;
 		for (int i = 0; i < playlists.size(); i++) {
-			RemotePlaylist playlist = playlists.at(i);
+			PlaylistDAO playlist = playlists.at(i);
 			playlist.setIcon(QIcon(":/icon"));
 			// Forward tracklist
 			if (_db.insertIntoTablePlaylists(playlist)) {
@@ -398,12 +398,12 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlistId, QXmlStreamReader &xml, int index)
 {
 	qDebug() << Q_FUNC_INFO;
-	std::list<RemoteTrack> tracks;
+	std::list<TrackDAO> tracks;
 	while (!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "track") {
-				RemoteTrack track;
+				TrackDAO track;
 				track.setId(this->extract(xml, "id"));
 				track.setTitle(this->extract(xml, "title"));
 				track.setUrl(this->extract(xml, "link"));
@@ -430,15 +430,15 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml)
 {
 	static QIcon icon(":/icon");
-	std::list<RemoteTrack> tracks;
+	std::list<TrackDAO> tracks;
 	if (_cache.contains(albumID)) {
 
-		RemoteTrack *templateTrack = _cache.value(albumID);
+		TrackDAO *templateTrack = _cache.value(albumID);
 		while (!xml.atEnd() && !xml.hasError()) {
 			QXmlStreamReader::TokenType token = xml.readNext();
 			if (token == QXmlStreamReader::StartElement) {
 				if (xml.name() == "track") {
-					RemoteTrack track;
+					TrackDAO track;
 					track.setId(this->extract(xml, "id"));
 					track.setTitle(this->extract(xml, "title"));
 					track.setUrl(this->extract(xml, "link"));
@@ -633,15 +633,15 @@ void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
 	emit searchComplete(AbstractSearchDialog::Album, results);
 }
 
-void DeezerPlugin::updateTableTracks(const std::list<RemoteTrack> &tracks)
+void DeezerPlugin::updateTableTracks(const std::list<TrackDAO> &tracks)
 {
 	if (!_dzDb.isOpen()) {
 		_dzDb.open();
 	}
 
 	_dzDb.exec("BEGIN TRANSACTION");
-	for (std::list<RemoteTrack>::const_iterator it = tracks.cbegin(); it != tracks.cend(); ++it) {
-		RemoteTrack track = *it;
+	for (std::list<TrackDAO>::const_iterator it = tracks.cbegin(); it != tracks.cend(); ++it) {
+		TrackDAO track = *it;
 		QSqlQuery insert(_dzDb);
 		insert.prepare("INSERT INTO tracks (id, name, artist, album) VALUES (?, ?, ?, ?)");
 		insert.addBindValue(track.id());

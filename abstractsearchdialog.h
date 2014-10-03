@@ -7,7 +7,7 @@
 #include <QListView>
 #include <QStandardItem>
 
-#include "model/remotetrack.h"
+#include "model/trackdao.h"
 
 typedef QList<QStandardItem*> QStandardItemList;
 
@@ -44,7 +44,7 @@ public:
 public slots:
 	virtual void processResults(Request type, const QStandardItemList &results) = 0;
 
-	virtual void aboutToProcessRemoteTracks(const std::list<RemoteTrack> &tracks) = 0;
+	virtual void aboutToProcessRemoteTracks(const std::list<TrackDAO> &tracks) = 0;
 
 signals:
 	void aboutToSearch(const QString &text);

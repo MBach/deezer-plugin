@@ -3,7 +3,7 @@
 
 #include "miamcore_global.h"
 #include "remotemediaplayerplugin.h"
-#include "model/remotetrack.h"
+#include "model/trackdao.h"
 
 #include <QCache>
 #include <QNetworkReply>
@@ -45,7 +45,7 @@ private:
 	DeezerDatabase _dzDb;
 	SqlDatabase _db;
 
-	QMap<QString, RemoteTrack*> _cache;
+	QMap<QString, TrackDAO*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
 	QList<QNetworkReply*> _pendingRequest;
 
@@ -93,7 +93,7 @@ private:
 	void extractSynchronizedTracksFromPlaylists(const QString &playlistId, QXmlStreamReader &xml, int index = 0);
 	void extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml);
 	void searchRequestFinished(QXmlStreamReader &xml);
-	void updateTableTracks(const std::list<RemoteTrack> &tracks);
+	void updateTableTracks(const std::list<TrackDAO> &tracks);
 
 private slots:
 	/** TODO. */
@@ -121,7 +121,7 @@ signals:
 	/** Callback for the view. */
 	void searchComplete(AbstractSearchDialog::Request, QList<QStandardItem*> results);
 
-	void aboutToProcessRemoteTracks(const std::list<RemoteTrack> &tracks);
+	void aboutToProcessRemoteTracks(const std::list<TrackDAO> &tracks);
 };
 
 #endif // DEEZERPLUGIN_H
