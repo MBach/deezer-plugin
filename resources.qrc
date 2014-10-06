@@ -3,6 +3,6 @@
         <file>translations/Deezer-Plugin_en.qm</file>
         <file>translations/Deezer-Plugin_fr.qm</file>
         <file alias="logo">deezer-logo.png</file>
-        <file alias="icon">deezer-icon.png</file>
+        <file alias="deezer-icon">deezer-icon.png</file>
     </qresource>
 </RCC>

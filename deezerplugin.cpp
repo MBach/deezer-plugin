@@ -27,12 +27,7 @@ DeezerPlugin::DeezerPlugin()
 
 	// Dispatch replies: search for something, get artist info, get tracks from album, get track info, fetch, synchronize...
 	connect(nam, &QNetworkAccessManager::finished, this, &DeezerPlugin::dispatchReply);
-
 	connect(_webPlayer->webView(), &WebView::aboutToSyncWithToken, this, &DeezerPlugin::sync);
-	/*connect(_webPlayer->webView(), &WebView::aboutToSyncWithToken, this, [=](const QString &token) {
-		qDebug() << "about to sync";
-		this->sync(token);
-	});*/
 
 	QWebSettings *s = QWebSettings::globalSettings();
 	/// XXX
@@ -138,7 +133,7 @@ void DeezerPlugin::sync(const QString &token) const
 		qDebug() << Q_FUNC_INFO << token;
 		qDebug() << "Ready to synchronize Library with Deezer (fetching remote only)";
 		// First, get checksum for Artists, Albums and Playlists
-		/// TODO: playlists, albums (followers?)
+		/// TODO: albums (followers?)
 		NetworkAccessManager *inst = NetworkAccessManager::getInstance();
 		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + token)));
 		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/playlists?output=xml&access_token=" + token)));
@@ -152,7 +147,6 @@ bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 		QDesktopServices::openUrl(QUrl("http://www.deezer.com"));
 		return true;
 	} else if (event->type() == QEvent::Show) {
-		qDebug() << "show event";
 		return true;
 	} else {
 		return QObject::eventFilter(obj, event);
@@ -189,7 +183,6 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 			if (!albumIdFound) {
 				id = this->extract(xml, "id");
 				albumIdFound = true;
-				qDebug() << "id" << id;
 			}
 			if (xml.name() == "title") {
 				album = xml.readElementText();
@@ -360,6 +353,13 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 				playlist.setId(this->extract(xml, "id"));
 				playlist.setTitle(this->extract(xml, "title"));
 				playlist.setLength(this->extract(xml, "duration"));
+				// Extract picture in another request
+				QString picture = this->extract(xml, "picture");
+				if (!picture.isEmpty()) {
+					QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/image?size=big"));
+					QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
+					_pendingRequest.append(reply);
+				}
 				playlist.setChecksum(this->extract(xml, "checksum"));
 				qDebug() << "appending" << playlist.title() << playlist.checksum();
 				playlists.append(playlist);
@@ -377,7 +377,7 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 		bool ok = true;
 		for (int i = 0; i < playlists.size(); i++) {
 			PlaylistDAO playlist = playlists.at(i);
-			playlist.setIcon(QIcon(":/icon"));
+			playlist.setIconPath(":/deezer-icon");
 			// Forward tracklist
 			if (_db.insertIntoTablePlaylists(playlist)) {
 				QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/tracks?output=xml"));
@@ -414,6 +414,7 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 
 				// in node <album></album>
 				track.setAlbum(this->extract(xml, "title"));
+				track.setIconPath(":/deezer-icon");
 				tracks.push_back(std::move(track));
 			} else if (xml.name() == "next") {
 				if (index == 0) {
@@ -429,7 +430,7 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 
 void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml)
 {
-	static QIcon icon(":/icon");
+	static QIcon icon(":/deezer-icon");
 	std::list<TrackDAO> tracks;
 	if (_cache.contains(albumID)) {
 
@@ -450,7 +451,7 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 					track.setRating(r);
 					track.setArtist(templateTrack->artist());
 					track.setAlbum(templateTrack->album());
-					track.setIcon(icon);
+					track.setIconPath(":/deezer-icon");
 					track.setYear(templateTrack->year().left(4));
 					tracks.push_back(std::move(track));
 				}
@@ -502,12 +503,21 @@ void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
 	}
 }
 
+#include <QStandardPaths>
+
 /** Display everything! */
 void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 {
+	QUrl redirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+	if (!redirectUrl.isEmpty() && redirectUrl != reply->request().url()) {
+		NetworkAccessManager::getInstance()->get(QNetworkRequest(redirectUrl));
+		return;
+	}
+
 	QNetworkRequest request = reply->request();
 	QString r = request.url().toDisplayString();
-	QXmlStreamReader xml(reply->readAll());
+	QByteArray ba = reply->readAll();
+	QXmlStreamReader xml(ba);
 
 	/// WARNING: used by sync() and search() -> album/<id>/tracklist
 	QRegularExpression reg("http://api.deezer.com/album/[0-9]+/tracks");
@@ -532,6 +542,18 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 			index = r.mid(equal + 1).toInt();
 		}
 		this->extractSynchronizedTracksFromPlaylists(playlistId, xml, index);
+	} else if (r.startsWith("http://cdn-images.deezer.com/images/playlist")) {
+
+		qDebug() << "extracting picture" << r;
+		QImage img = QImage::fromData(ba);
+		Settings *settings = Settings::getInstance();
+		QString path("%1/%2/%3");
+		path = path.arg(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation),
+						settings->organizationName(),
+						settings->applicationName());
+		//QString iconPath = QDir::toNativeSeparators(path + "/" + playlistId + ".jpg");
+		//img.save(iconPath);
+
 	//} else if (r.startsWith("http://api.deezer.com/user/me/flow")) {
 	//} else if (r.startsWith("http://api.deezer.com/user/me/following")) {
 	//} else if (r.startsWith("http://api.deezer.com/user/me/followers")) {
@@ -622,7 +644,7 @@ void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
 				if (!element.isEmpty()) {
 					element += " – " + xml.readElementText();
 					qDebug() << "deezer-album" << element;
-					QStandardItem *item = new QStandardItem(QIcon(":/icon"), element);
+					QStandardItem *item = new QStandardItem(QIcon(":/deezer-icon"), element);
 					item->setData(_checkBox->text(), AbstractSearchDialog::DT_Origin);
 					item->setData(id, AbstractSearchDialog::DT_Identifier);
 					results.append(item);

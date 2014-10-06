@@ -48,8 +48,6 @@ public slots:
 
 signals:
 	void aboutToSearch(const QString &text);
-
-	// void aboutToSendToCurrentPlaylist();
 };
 
 #endif // ABSTRACTSEARCHDIALOG_H
