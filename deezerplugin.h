@@ -6,6 +6,7 @@
 #include "model/trackdao.h"
 
 #include <QCache>
+#include <QDir>
 #include <QNetworkReply>
 #include <QXmlStreamReader>
 #include "ui_config.h"
@@ -48,6 +49,7 @@ private:
 	QMap<QString, TrackDAO*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
 	QList<QNetworkReply*> _pendingRequest;
+	QDir _cachePath;
 
 public:
 	/** Default constructor. */
@@ -88,6 +90,7 @@ private:
 	QString extract(QXmlStreamReader &xml, const QString &criterion);
 	void extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml);
 	void extractAlbumListFromArtist(QNetworkReply *reply, const QString &artistId, QXmlStreamReader &xml);
+	void extractPlaylistBackground(const QUrl &url, QByteArray &ba);
 	void extractSynchronizedArtists(QXmlStreamReader &xml);
 	void extractSynchronizedPlaylists(QXmlStreamReader &xml);
 	void extractSynchronizedTracksFromPlaylists(const QString &playlistId, QXmlStreamReader &xml, int index = 0);
