@@ -663,7 +663,7 @@ void DeezerPlugin::updateTableTracks(const std::list<TrackDAO> &tracks)
 		_dzDb.open();
 	}
 
-	_dzDb.exec("BEGIN TRANSACTION");
+	_dzDb.transaction();
 	for (std::list<TrackDAO>::const_iterator it = tracks.cbegin(); it != tracks.cend(); ++it) {
 		TrackDAO track = *it;
 		QSqlQuery insert(_dzDb);
@@ -674,7 +674,7 @@ void DeezerPlugin::updateTableTracks(const std::list<TrackDAO> &tracks)
 		insert.addBindValue(track.album());
 		insert.exec();
 	}
-	_dzDb.exec("COMMIT TRANSACTION");
+	_dzDb.commit();
 	_dzDb.close();
 }
 
