@@ -21,13 +21,16 @@
 /** Default constructor. */
 DeezerPlugin::DeezerPlugin()
 	: QObject(), _artists(NULL), _albums(NULL), _tracks(NULL), _searchDialog(NULL),
-	  _checkBox(NULL), _webPlayer(new DeezerWebPlayer(this))
+	  _checkBox(NULL), _webPlayer(new DeezerWebPlayer(this)), _db(new SqlDatabase(this))
 {
 	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
 	nam->setCookieJar(new CookieJar);
 
 	// Dispatch replies: search for something, get artist info, get tracks from album, get track info, fetch, synchronize...
 	connect(nam, &QNetworkAccessManager::finished, this, &DeezerPlugin::dispatchReply);
+	connect(nam, &NetworkAccessManager::syncHasFinished, this, [=]() {
+		_dzDb.extractTo(_db);
+	});
 	connect(_webPlayer->webView(), &WebView::aboutToSyncWithToken, this, &DeezerPlugin::sync);
 
 	QWebSettings *s = QWebSettings::globalSettings();
@@ -144,6 +147,7 @@ void DeezerPlugin::sync(const QString &token) const
 		NetworkAccessManager *inst = NetworkAccessManager::getInstance();
 		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + token)));
 		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/playlists?output=xml&access_token=" + token)));
+		inst->setSync(true);
 	}
 }
 
@@ -266,7 +270,6 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 				if (_repliesWhichInteractWithUi.contains(reply)) {
 					Reply forward =_repliesWhichInteractWithUi.take(reply);
 					delete reply;
-					qDebug() << "forwarding" << forward << nextReply;
 					_repliesWhichInteractWithUi.insert(nextReply, forward);
 				}
 			}
@@ -285,7 +288,7 @@ void DeezerPlugin::extractPlaylistBackground(const QUrl &url, QByteArray &ba)
 	QString playlistImage = QDir::toNativeSeparators(_cachePath.absolutePath() + "/playlist_" + playlistId + ".jpg");
 	img.save(playlistImage);
 
-	_db.updateTablePlaylistWithBackgroundImage(playlistId.toInt(), playlistImage);
+	_db->updateTablePlaylistWithBackgroundImage(playlistId.toInt(), playlistImage);
 }
 
 void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
@@ -365,7 +368,7 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 
 				// Extract picture in another request
 				QString picture = this->extract(xml, "picture");
-				if (!picture.isEmpty() && !_db.playlistHasBackgroundImage(playlist.id().toInt())) {
+				if (!picture.isEmpty() && !_db->playlistHasBackgroundImage(playlist.id().toInt())) {
 					qDebug() << "picture was found and no bg was found in database";
 					QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/image?size=big"));
 					QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
@@ -384,14 +387,14 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 		}
 	}
 	if (needToSyncPlaylists) {
-		_db.removePlaylists(playlists);
+		_db->removePlaylists(playlists);
 		bool ok = true;
 		for (int i = 0; i < playlists.size(); i++) {
 			PlaylistDAO playlist = playlists.at(i);
 			playlist.setIconPath(":/deezer-icon");
 
 			// Forward tracklist
-			if (_db.insertIntoTablePlaylists(playlist) > 0) {
+			if (_db->insertIntoTablePlaylists(playlist) > 0) {
 				QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/tracks?output=xml"));
 				QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
 				_pendingRequest.append(reply);
@@ -437,7 +440,7 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 			}
 		}
 	}
-	_db.insertIntoTablePlaylistTracks(playlistId.toInt(), tracks);
+	_db->insertIntoTablePlaylistTracks(playlistId.toInt(), tracks);
 }
 
 void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml)

@@ -44,7 +44,7 @@ private:
 	DeezerWebPlayer *_webPlayer;
 
 	DeezerDatabase _dzDb;
-	SqlDatabase _db;
+	SqlDatabase *_db;
 
 	QMap<QString, TrackDAO*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;

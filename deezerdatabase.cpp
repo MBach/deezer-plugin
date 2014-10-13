@@ -7,6 +7,8 @@
 #include <QSqlQuery>
 #include <QStandardPaths>
 
+#include <QtDebug>
+
 DeezerDatabase::DeezerDatabase()
 	: QSqlDatabase("QSQLITE")
 {
@@ -37,4 +39,10 @@ DeezerDatabase::DeezerDatabase()
 		// exec("CREATE INDEX IF NOT EXISTS indexTracks ON tracks (id)");
 		close();
 	}
+}
+
+void DeezerDatabase::extractTo(SqlDatabase *db)
+{
+	qDebug() << Q_FUNC_INFO;
+
 }

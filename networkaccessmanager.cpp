@@ -62,10 +62,24 @@ NetworkAccessManager* NetworkAccessManager::networkAccessManager = NULL;
 
 NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	: QNetworkAccessManager(parent),
-	requestFinishedCount(0), requestFinishedFromCacheCount(0), requestFinishedPipelinedCount(0),
-	requestFinishedSecureCount(0), requestFinishedDownloadBufferCount(0)
+	_requestCount(0), _timer(new QTimer(this)), _isSync(false)
 {
 	connect(this, &QNetworkAccessManager::sslErrors, this, &NetworkAccessManager::ignoreSslErrors);
+	connect(this, &QNetworkAccessManager::finished, this, [=]() {
+		_requestCount--;
+	});
+
+	_timer->setInterval(250);
+	connect(_timer, &QTimer::timeout, this, [=]() {
+		if (_requestCount == 0) {
+			_timer->setSingleShot(true);
+			// sync has finished
+			if (_isSync) {
+				_isSync = false;
+				emit syncHasFinished();
+			}
+		}
+	});
 
 	loadSettings();
 
@@ -86,6 +100,10 @@ NetworkAccessManager* NetworkAccessManager::getInstance()
 QNetworkReply* NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & req, QIODevice * outgoingData)
 {
 	QNetworkRequest request = req; // copy so we can modify
+	_requestCount++;
+	if (!_timer->isActive()) {
+		_timer->start();
+	}
 
 	// this is a temporary hack until we properly use the pipelining flags from QtWebkit
 	// pipeline everything! :)

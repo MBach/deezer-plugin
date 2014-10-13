@@ -45,9 +45,16 @@
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkRequest>
 
+#include <QTimer>
+
+
 class NetworkAccessManager : public QNetworkAccessManager
 {
 	Q_OBJECT
+
+private:
+	QTimer *_timer;
+	bool _isSync;
 
 public:
 	NetworkAccessManager(QObject *parent = 0);
@@ -55,15 +62,13 @@ public:
 	/** Singleton Pattern to easily use Settings everywhere in the app. */
 	static NetworkAccessManager* getInstance();
 
-	virtual QNetworkReply* createRequest (Operation op, const QNetworkRequest & req, QIODevice * outgoingData = 0 );
+	virtual QNetworkReply* createRequest (Operation op, const QNetworkRequest &req, QIODevice *outgoingData = 0);
+
+	inline void setSync(bool sync) { _isSync = sync; }
 
 private:
 	QList<QString> sslTrustedHostList;
-	qint64 requestFinishedCount;
-	qint64 requestFinishedFromCacheCount;
-	qint64 requestFinishedPipelinedCount;
-	qint64 requestFinishedSecureCount;
-	qint64 requestFinishedDownloadBufferCount;
+	qint64 _requestCount;
 
 	/** The unique instance of this class. */
 	static NetworkAccessManager *networkAccessManager;
@@ -73,6 +78,9 @@ public slots:
 
 private slots:
 	void ignoreSslErrors(QNetworkReply *reply, const QList<QSslError> &);
+
+signals:
+	void syncHasFinished();
 };
 
 #endif // NETWORKACCESSMANAGER_H
