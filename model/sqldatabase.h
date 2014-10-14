@@ -53,6 +53,8 @@ public:
 	 * \param tracksToUpdate 'First' in pair is actual filename, 'Second' is the new filename, but may be empty.*/
 	void updateTracks(const QList<QPair<QString, QString> > &tracksToUpdate);
 
+	void loadRemoteTracks(const QList<TrackDAO> &tracks);
+
 private:
 	/** Read all tracks entries in the database and send them to connected views. */
 	void loadFromFileDB();

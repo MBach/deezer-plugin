@@ -74,10 +74,13 @@ public:
 	inline virtual QWidget* providesView() { return NULL; }
 
 	/** Release displayed in options. */
-	inline virtual QString version() const { return "0.2"; }
+	inline virtual QString version() const { return "0.3"; }
 
 	/** Redefined. */
 	virtual void setSearchDialog(AbstractSearchDialog *w);
+
+	/** Redefined. */
+	virtual void DeezerPlugin::setDatabase(SqlDatabase *db);
 
 	/** Redefined. */
 	virtual void sync(const QString &token) const;
@@ -96,7 +99,6 @@ private:
 	void extractSynchronizedTracksFromPlaylists(const QString &playlistId, QXmlStreamReader &xml, int index = 0);
 	void extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml);
 	void searchRequestFinished(QXmlStreamReader &xml);
-	void updateTableTracks(const std::list<TrackDAO> &tracks);
 
 private slots:
 	/** TODO. */

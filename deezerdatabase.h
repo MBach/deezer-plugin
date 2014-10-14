@@ -19,6 +19,10 @@ public:
 	inline bool isEmpty() const { return _isEmpty; }
 
 	void extractTo(SqlDatabase *db);
+
+	void updateTableTracks(const std::list<TrackDAO> &tracks);
+
+	bool insertIntoTableAlbums(const QString &artist, const TrackDAO &album);
 };
 
 #endif // DEEZERDATABASE_H

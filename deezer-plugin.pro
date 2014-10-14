@@ -20,7 +20,8 @@ CONFIG(release, debug|release) {
 
 INSTALLS += target
 
-HEADERS += model/genericdao.h \
+HEADERS += model/albumdao.h \
+    model/genericdao.h \
     model/playlistdao.h \
     model/trackdao.h \
     model/sqldatabase.h \
