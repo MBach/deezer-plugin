@@ -20,29 +20,30 @@ CONFIG(release, debug|release) {
 
 INSTALLS += target
 
-HEADERS += model/albumdao.h \
+HEADERS += interfaces/basicplugin.h \
+    interfaces/remotemediaplayerplugin.h \
+    model/albumdao.h \
+    model/artistdao.h \
     model/genericdao.h \
     model/playlistdao.h \
-    model/trackdao.h \
     model/sqldatabase.h \
+    model/trackdao.h \
     abstractsearchdialog.h \
     autosaver.h \
-    basicplugin.h \
     cookiejar.h \
-    deezerdatabase.h \
+    # deezerdatabase.h \
     deezerplugin.h \
     deezerwebplayer.h \
     filehelper.h \
     miamcore_global.h \
     networkaccessmanager.h \
     remotemediaplayer.h \
-    remotemediaplayerplugin.h \
     settings.h \
     webview.h
 
 SOURCES += autosaver.cpp \
     cookiejar.cpp \
-    deezerdatabase.cpp \
+    # deezerdatabase.cpp \
     deezerplugin.cpp \
     deezerwebplayer.cpp \
     networkaccessmanager.cpp \

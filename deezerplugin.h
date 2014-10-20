@@ -2,7 +2,7 @@
 #define DEEZERPLUGIN_H
 
 #include "miamcore_global.h"
-#include "remotemediaplayerplugin.h"
+#include "interfaces/remotemediaplayerplugin.h"
 #include "model/trackdao.h"
 
 #include <QCache>
@@ -19,7 +19,7 @@ class QWebView;
 /**
  * \brief       Deezer plugin
  * \author      Matthieu Bachelier
- * \version     0.2
+ * \version     0.4
  * \copyright   GNU General Public License v3
  */
 class DeezerPlugin : public QObject, public RemoteMediaPlayerPlugin
@@ -42,11 +42,10 @@ private:
 	QListView *_tracks;
 	QCheckBox *_checkBox;
 	DeezerWebPlayer *_webPlayer;
-
-	DeezerDatabase _dzDb;
 	SqlDatabase *_db;
 
-	QMap<QString, TrackDAO*> _cache;
+	//QMap<QString, GenericDAO*> _cache;
+	QMap<QString, AlbumDAO*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
 	QList<QNetworkReply*> _pendingRequest;
 	QDir _cachePath;
@@ -74,7 +73,7 @@ public:
 	inline virtual QWidget* providesView() { return NULL; }
 
 	/** Release displayed in options. */
-	inline virtual QString version() const { return "0.3"; }
+	inline virtual QString version() const { return "0.4"; }
 
 	/** Redefined. */
 	virtual void setSearchDialog(AbstractSearchDialog *w);
@@ -92,12 +91,13 @@ protected:
 private:
 	QString extract(QXmlStreamReader &xml, const QString &criterion);
 	void extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml);
-	void extractAlbumListFromArtist(QNetworkReply *reply, const QString &artistId, QXmlStreamReader &xml);
-	void extractPlaylistBackground(const QUrl &url, QByteArray &ba);
+	void extractAlbumListFromArtist(QNetworkReply *reply, const QString &dzArtistId, QXmlStreamReader &xml);
+	void extractImageForPlaylist(const QUrl &url, QByteArray &ba);
+	void extractImageCoverForLibrary(const QUrl &url, const QVariant &va, QByteArray &ba);
 	void extractSynchronizedArtists(QXmlStreamReader &xml);
 	void extractSynchronizedPlaylists(QXmlStreamReader &xml);
 	void extractSynchronizedTracksFromPlaylists(const QString &playlistId, QXmlStreamReader &xml, int index = 0);
-	void extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml);
+	void extractTrackListFromAlbum(QNetworkReply *reply, const QString &dzAlbumId, QXmlStreamReader &xml);
 	void searchRequestFinished(QXmlStreamReader &xml);
 
 private slots:
@@ -124,7 +124,7 @@ private slots:
 
 signals:
 	/** Callback for the view. */
-	void searchComplete(AbstractSearchDialog::Request, QList<QStandardItem*> results);
+	void searchCompleted(AbstractSearchDialog::Request, QList<QStandardItem*> results);
 
 	void aboutToProcessRemoteTracks(const std::list<TrackDAO> &tracks);
 };

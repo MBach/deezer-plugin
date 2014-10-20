@@ -20,9 +20,9 @@ public:
 
 	void extractTo(SqlDatabase *db);
 
-	void updateTableTracks(const std::list<TrackDAO> &tracks);
+	// void updateTableTracks(const std::list<TrackDAO> &tracks);
 
-	bool insertIntoTableAlbums(const QString &artist, const TrackDAO &album);
+	bool insertIntoTableAlbums(const QString &artist, const AlbumDAO &album);
 };
 
 #endif // DEEZERDATABASE_H

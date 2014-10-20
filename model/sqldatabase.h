@@ -2,6 +2,8 @@
 #define SQLDATABASE_H
 
 #include "../miamcore_global.h"
+#include "artistdao.h"
+#include "albumdao.h"
 #include "trackdao.h"
 #include "playlistdao.h"
 
@@ -29,15 +31,26 @@ private:
 	/** Object than can iterate throught the FileSystem for Audio files. */
 	MusicSearchEngine *_musicSearchEngine;
 
+	Q_ENUMS(extension)
+
 public:
 	explicit SqlDatabase(QObject *parent = NULL);
 
+		enum InsertPolicy { IP_Artists			= 0,
+							IP_Albums			= 1,
+							IP_ArtistsAlbums	= 2,
+							IP_Years			= 3 };
+
 	virtual ~SqlDatabase() {}
 
+	bool insertIntoTableArtists(const ArtistDAO &artist);
+	bool insertIntoTableAlbums(uint artistId, const AlbumDAO &album);
 	bool insertIntoTablePlaylistTracks(int playlistId, const std::list<TrackDAO> &tracks);
+	int  insertIntoTablePlaylists(const PlaylistDAO &playlist);
+	bool insertIntoTableTracks(const TrackDAO &track);
+	bool insertIntoTableTracks(const std::list<TrackDAO> &tracks);
 
-	int insertIntoTablePlaylists(const PlaylistDAO &playlist);
-
+	void removeRecordsFromHost(const QString &host);
 	void removePlaylists(const QList<PlaylistDAO> &playlists);
 
 	QList<TrackDAO> selectPlaylistTracks(int playlistID);
@@ -47,6 +60,7 @@ public:
 
 	bool playlistHasBackgroundImage(int playlistID);
 	void updateTablePlaylistWithBackgroundImage(int playlistID, const QString &backgroundImagePath);
+	void updateTableAlbumWithCoverImage(int albumId, const QString &coverPath);
 
 	/**
 	 * Update a list of tracks. If track name has changed, it will be removed from Library then added right after.
@@ -54,6 +68,8 @@ public:
 	void updateTracks(const QList<QPair<QString, QString> > &tracksToUpdate);
 
 	void loadRemoteTracks(const QList<TrackDAO> &tracks);
+
+	QString normalizeField(const QString &s) const;
 
 private:
 	/** Read all tracks entries in the database and send them to connected views. */
@@ -68,7 +84,7 @@ public slots:
 
 private slots:
 	/** Reads an external picture which is close to multimedia files (same folder). */
-	void saveCoverRef(const QString &coverPath);
+	void saveCoverRef(const QString &coverPath, const QString &track);
 
 	/** Reads a file from the filesystem and adds it into the library. */
 	void saveFileRef(const QString &absFilePath);
@@ -78,7 +94,9 @@ signals:
 	void coverWasUpdated(const QFileInfo &);
 	void loaded();
 	void progressChanged(const int &);
-	void trackExtracted(const TrackDAO &);
+
+	void nodeExtracted(GenericDAO *node);
+	void aboutToUpdateNode(GenericDAO *node);
 };
 
 #endif // SQLDATABASE_H

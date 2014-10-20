@@ -44,7 +44,7 @@ DeezerPlugin::DeezerPlugin()
 
 	Settings *settings = Settings::getInstance();
 	if (settings->value("DeezerPlugin/syncOptions").isNull()) {
-		QStringList l = QStringList() << "album" << "ep" << "single";
+		QStringList l = QStringList() << "album" << "ep";
 		settings->setValue("DeezerPlugin/syncOptions", l);
 	}
 
@@ -118,7 +118,7 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 	_checkBox->setChecked(true);
 	_checkBox->setText("Deezer");
 	connect(w, &AbstractSearchDialog::aboutToSearch, this, &DeezerPlugin::search);
-	connect(this, &DeezerPlugin::searchComplete, w, &AbstractSearchDialog::processResults);
+	connect(this, &DeezerPlugin::searchCompleted, w, &AbstractSearchDialog::processResults);
 	connect(this, &DeezerPlugin::aboutToProcessRemoteTracks, w, &AbstractSearchDialog::aboutToProcessRemoteTracks);
 
 	_searchDialog = w;
@@ -138,7 +138,7 @@ void DeezerPlugin::setDatabase(SqlDatabase *db)
 	_db = db;
 	NetworkAccessManager *inst = NetworkAccessManager::getInstance();
 	connect(inst, &NetworkAccessManager::syncHasFinished, this, [=]() {
-		_dzDb.extractTo(_db);
+		// _dzDb.extractTo(_db);
 	});
 }
 
@@ -189,7 +189,7 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 	QString artist;
 	QString album;
 	QString year;
-	TrackDAO *track = new TrackDAO;
+	AlbumDAO *albumDAO = new AlbumDAO;
 	while (!xml.atEnd() && !xml.hasError()) {
 
 		QXmlStreamReader::TokenType token = xml.readNext();
@@ -213,11 +213,11 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 				year = xml.readElementText();
 			}
 			if (artistFound && albumFound) {
-				track->setId(id);
-				track->setAlbum(album);
-				track->setArtist(artist);
-				track->setYear(year);
-				_cache.insert(id, track);
+				albumDAO->setId(id);
+				albumDAO->setTitle(album);
+				albumDAO->setArtist(artist);
+				albumDAO->setYear(year);
+				_cache.insert(id, albumDAO);
 
 				QNetworkReply *nextReply = NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/album/" + id + "/tracks/?output=xml")));
 				if (_repliesWhichInteractWithUi.contains(reply)) {
@@ -231,57 +231,64 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 	}
 }
 
-void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QString &artistId, QXmlStreamReader &xml)
+void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QString &dzArtistId, QXmlStreamReader &xml)
 {
-	QList<TrackDAO*> albums;
+	qDebug() << Q_FUNC_INFO;
+	QList<AlbumDAO*> albums;
 	Settings *settings = Settings::getInstance();
+	qDebug() << "syncOptions" << settings->value("DeezerPlugin/syncOptions").toStringList();
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "album") {
-				TrackDAO *album = new TrackDAO;
+				AlbumDAO *album = new AlbumDAO;
 				QString record_type;
 				album->setId(this->extract(xml, "id"));
 				QString title = this->extract(xml, "title");
 				// 7 == length(' (YYYY)')
-				album->setAlbum(title.left(title.length() - 7));
+				album->setTitle(title.left(title.length() - 7));
 				album->setYear(title.mid(title.length() - 5, 4));
 				record_type = this->extract(xml, "record_type");
 				if (settings->value("DeezerPlugin/syncOptions").toStringList().contains(record_type)) {
+					qDebug() << "title of album to append" << title;
 					albums.append(album);
+				} else {
+					qDebug() << "title of album to exclude" << title;
 				}
 			}
 		}
 	}
-	if (_dzDb.open()) {
-		QSqlQuery qArtistName = _dzDb.exec("SELECT name FROM artists WHERE id = " + artistId);
-		qArtistName.next();
-		QString artist = qArtistName.record().value(0).toString();
-		for (int i = 0; i < albums.size(); i++) {
-			TrackDAO *album = albums.at(i);
+	QString artist = reply->property("artist").toString();
+	uint artistId = qHash(_db->normalizeField(artist));
+	for (int i = 0; i < albums.size(); i++) {
+		AlbumDAO *album = albums.at(i);
+		album->setArtist(artist);
+		bool ok = _db->insertIntoTableAlbums(artistId, *album);
 
-			bool ok = _dzDb.insertIntoTableAlbums(artist, *album);
+		// Finally, extract track list
+		/// XXX: too much requests?
+		if (ok) {
+			album->setArtist(artist);
+			_cache.insert(album->id(), album);
 
-			// Finally, extract track list
-			/// XXX: too much requests?
-			if (ok) {
-				album->setArtist(artist);
-				_cache.insert(album->id(), album);
-
-				QNetworkReply *nextReply = NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/album/" + album->id() + "/tracks/?output=xml")));
-				if (_repliesWhichInteractWithUi.contains(reply)) {
-					Reply forward =_repliesWhichInteractWithUi.take(reply);
-					delete reply;
-					_repliesWhichInteractWithUi.insert(nextReply, forward);
-				}
+			QNetworkReply *nextReply = NetworkAccessManager::getInstance()->get(QNetworkRequest(QUrl("http://api.deezer.com/album/" + album->id() + "/tracks/?output=xml")));
+			if (_repliesWhichInteractWithUi.contains(reply)) {
+				Reply forward =_repliesWhichInteractWithUi.take(reply);
+				delete reply;
+				_repliesWhichInteractWithUi.insert(nextReply, forward);
 			}
+
+			QNetworkRequest r(QUrl("http://api.deezer.com/album/" + album->id() + "/image?size=big"));
+			QNetworkReply *getCover = NetworkAccessManager::getInstance()->get(r);
+			getCover->setProperty("albumDAO", QVariant::fromValue(*album));
+			_pendingRequest.append(getCover);
 		}
 	}
-	_dzDb.close();
 }
 
-void DeezerPlugin::extractPlaylistBackground(const QUrl &url, QByteArray &ba)
+void DeezerPlugin::extractImageForPlaylist(const QUrl &url, QByteArray &ba)
 {
+	/// XXX: magic number
 	QString u = url.toString();
 	int slash = u.indexOf("/", 31);
 	QString playlistId = u.mid(31, slash - 31);
@@ -293,6 +300,25 @@ void DeezerPlugin::extractPlaylistBackground(const QUrl &url, QByteArray &ba)
 	_db->updateTablePlaylistWithBackgroundImage(playlistId.toInt(), playlistImage);
 }
 
+void DeezerPlugin::extractImageCoverForLibrary(const QUrl &url, const QVariant &va, QByteArray &ba)
+{
+	qDebug() << Q_FUNC_INFO << url << va;
+
+	if (va.canConvert<AlbumDAO>()) {
+		/// XXX: magic number
+		QString u = url.toString();
+		int slash = u.indexOf("/", 28);
+		QString albumId = u.mid(28, slash - 28);
+		QImage img = QImage::fromData(ba);
+
+		QString coverImage = QDir::toNativeSeparators(_cachePath.absolutePath() + "/album_" + albumId + ".jpg");
+		img.save(coverImage);
+
+		AlbumDAO album = va.value<AlbumDAO>();
+		_db->updateTableAlbumWithCoverImage(album.id().toInt(), coverImage);
+	}
+}
+
 void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 {
 	qDebug() << Q_FUNC_INFO;
@@ -300,14 +326,14 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 	bool needToSyncArtists = false;
 	QVariant checkSum = settings->value("DeezerPlugin/artists/checksum");
 	QString sum;
-	QList<TrackDAO> artists;
+	QList<ArtistDAO> artists;
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "artist") {
-				TrackDAO artist;
+				ArtistDAO artist;
 				artist.setId(this->extract(xml, "id"));
-				artist.setArtist(this->extract(xml, "name"));
+				artist.setTitle(this->extract(xml, "name"));
 				artists.append(artist);
 			}
 			if (xml.name() == "checksum") {
@@ -320,31 +346,22 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 			}
 		}
 	}
-	if (needToSyncArtists || _dzDb.isEmpty()) {
-		if (_dzDb.open()) {
-			QSqlQuery truncate(_dzDb);
-			if (!truncate.exec("DELETE FROM artists")) {
-				qDebug() << "couldn't truncate table artists :(";
+	if (needToSyncArtists) {
+		_db->removeRecordsFromHost(this->name());
+		bool ok = true;
+		for (int i = 0; i < artists.size(); i++) {
+			ArtistDAO artist = artists.at(i);
+			if (_db->insertIntoTableArtists(artist)) {
+				QNetworkRequest r(QUrl("http://api.deezer.com/artist/" + artist.id() + "/albums?output=xml"));
+				QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
+				reply->setProperty("artist", artist.title());
+				_repliesWhichInteractWithUi.insert(reply, RPL_UpdateCacheDatabase);
+			} else {
+				ok = false;
 			}
-			bool ok = true;
-			for (int i = 0; i < artists.size(); i++) {
-				TrackDAO artist = artists.at(i);
-				QSqlQuery insert(_dzDb);
-				insert.prepare("INSERT INTO artists(id, name) VALUES (?, ?)");
-				insert.addBindValue(artist.id());
-				insert.addBindValue(artist.artist());
-				if (insert.exec()) {
-					QNetworkRequest r(QUrl("http://api.deezer.com/artist/" + artist.id() + "/albums?output=xml"));
-					QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
-					_repliesWhichInteractWithUi.insert(reply, RPL_UpdateCacheDatabase);
-				} else {
-					ok = false;
-				}
-			}
-			_dzDb.close();
-			if (ok) {
-				settings->setValue("DeezerPlugin/artists/checksum", sum);
-			}
+		}
+		if (ok) {
+			settings->setValue("DeezerPlugin/artists/checksum", sum);
 		}
 	} else {
 		qDebug() << "artists are synchronized!";
@@ -393,7 +410,7 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 		bool ok = true;
 		for (int i = 0; i < playlists.size(); i++) {
 			PlaylistDAO playlist = playlists.at(i);
-			playlist.setIconPath(":/deezer-icon");
+			playlist.setIcon(":/deezer-icon");
 
 			// Forward tracklist
 			if (_db->insertIntoTablePlaylists(playlist) > 0) {
@@ -445,12 +462,13 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 	_db->insertIntoTablePlaylistTracks(playlistId.toInt(), tracks);
 }
 
-void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &albumID, QXmlStreamReader &xml)
+void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &dzAlbumId, QXmlStreamReader &xml)
 {
 	std::list<TrackDAO> tracks;
-	if (_cache.contains(albumID)) {
+	if (_cache.contains(dzAlbumId)) {
 
-		TrackDAO *templateTrack = _cache.value(albumID);
+		AlbumDAO *cachedAlbum = _cache.value(dzAlbumId);
+		qDebug() << "cachedAlbum" << cachedAlbum;
 		while (!xml.atEnd() && !xml.hasError()) {
 			QXmlStreamReader::TokenType token = xml.readNext();
 			if (token == QXmlStreamReader::StartElement) {
@@ -465,14 +483,16 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 					int r = this->extract(xml, "rank").toInt();
 					r = round((double)r / 166666);
 					track.setRating(r);
-					track.setArtist(templateTrack->artist());
-					track.setAlbum(templateTrack->album());
+					track.setArtist(cachedAlbum->artist());
+					track.setAlbum(cachedAlbum->title());
 					track.setIconPath(":/deezer-icon");
-					track.setYear(templateTrack->year().left(4));
+					track.setYear(cachedAlbum->year().left(4));
 					tracks.push_back(std::move(track));
 				}
 			}
 		}
+		_cache.remove(dzAlbumId);
+
 		/// XXX: this is really a big mess mixing updating cache and UI actions
 		if (_repliesWhichInteractWithUi.contains(reply)) {
 			Reply value = _repliesWhichInteractWithUi.value(reply);
@@ -489,7 +509,7 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 			_repliesWhichInteractWithUi.remove(reply);
 			delete reply;
 		} else {
-			_dzDb.updateTableTracks(tracks);
+			_db->insertIntoTableTracks(tracks);
 		}
 	}
 }
@@ -559,7 +579,11 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 		this->extractSynchronizedTracksFromPlaylists(playlistId, xml, index);
 	} else if (r.startsWith("http://cdn-images.deezer.com/images/playlist")) {
 
-		this->extractPlaylistBackground(reply->property("origin").toUrl(), ba);
+		this->extractImageForPlaylist(reply->property("origin").toUrl(), ba);
+
+	} else if (r.startsWith("http://cdn-images.deezer.com/images/cover")) {
+
+		this->extractImageCoverForLibrary(reply->property("origin").toUrl(), reply->property("albumDAO"), ba);
 
 	//} else if (r.startsWith("http://api.deezer.com/user/me/flow")) {
 	//} else if (r.startsWith("http://api.deezer.com/user/me/following")) {
@@ -659,7 +683,7 @@ void DeezerPlugin::searchRequestFinished(QXmlStreamReader &xml)
 			}
 		}
 	}
-	emit searchComplete(AbstractSearchDialog::Album, results);
+	emit searchCompleted(AbstractSearchDialog::Album, results);
 }
 
 void DeezerPlugin::trackWasDoubleClicked(const QModelIndex &index)
