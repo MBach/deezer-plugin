@@ -60,7 +60,7 @@ public:
 
 	bool playlistHasBackgroundImage(int playlistID);
 	void updateTablePlaylistWithBackgroundImage(int playlistID, const QString &backgroundImagePath);
-	void updateTableAlbumWithCoverImage(int albumId, const QString &coverPath);
+	void updateTableAlbumWithCoverImage(const QString &coverPath, const QString &album, const QString &artist);
 
 	/**
 	 * Update a list of tracks. If track name has changed, it will be removed from Library then added right after.

@@ -248,6 +248,7 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 				// 7 == length(' (YYYY)')
 				album->setTitle(title.left(title.length() - 7));
 				album->setYear(title.mid(title.length() - 5, 4));
+
 				record_type = this->extract(xml, "record_type");
 				if (settings->value("DeezerPlugin/syncOptions").toStringList().contains(record_type)) {
 					qDebug() << "title of album to append" << title;
@@ -263,6 +264,8 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 	for (int i = 0; i < albums.size(); i++) {
 		AlbumDAO *album = albums.at(i);
 		album->setArtist(artist);
+		// album->setHost(_webPlayer->host());
+		album->setIcon(":/deezer-icon2");
 		bool ok = _db->insertIntoTableAlbums(artistId, *album);
 
 		// Finally, extract track list
@@ -294,7 +297,7 @@ void DeezerPlugin::extractImageForPlaylist(const QUrl &url, QByteArray &ba)
 	QString playlistId = u.mid(31, slash - 31);
 	QImage img = QImage::fromData(ba);
 
-	QString playlistImage = QDir::toNativeSeparators(_cachePath.absolutePath() + "/playlist_" + playlistId + ".jpg");
+	QString playlistImage = _cachePath.absolutePath() + "/playlist_" + playlistId + ".jpg";
 	img.save(playlistImage);
 
 	_db->updateTablePlaylistWithBackgroundImage(playlistId.toInt(), playlistImage);
@@ -302,8 +305,6 @@ void DeezerPlugin::extractImageForPlaylist(const QUrl &url, QByteArray &ba)
 
 void DeezerPlugin::extractImageCoverForLibrary(const QUrl &url, const QVariant &va, QByteArray &ba)
 {
-	qDebug() << Q_FUNC_INFO << url << va;
-
 	if (va.canConvert<AlbumDAO>()) {
 		/// XXX: magic number
 		QString u = url.toString();
@@ -311,11 +312,11 @@ void DeezerPlugin::extractImageCoverForLibrary(const QUrl &url, const QVariant &
 		QString albumId = u.mid(28, slash - 28);
 		QImage img = QImage::fromData(ba);
 
-		QString coverImage = QDir::toNativeSeparators(_cachePath.absolutePath() + "/album_" + albumId + ".jpg");
+		QString coverImage = _cachePath.absolutePath() + "/album_" + albumId + ".jpg";
 		img.save(coverImage);
 
 		AlbumDAO album = va.value<AlbumDAO>();
-		_db->updateTableAlbumWithCoverImage(album.id().toInt(), coverImage);
+		_db->updateTableAlbumWithCoverImage(coverImage, album.title(), album.artist());
 	}
 }
 
@@ -546,6 +547,7 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 	if (!redirectUrl.isEmpty() && redirectUrl != reply->request().url()) {
 		QNetworkReply *forward = NetworkAccessManager::getInstance()->get(QNetworkRequest(redirectUrl));
 		forward->setProperty("origin", reply->request().url());
+		forward->setProperty("albumDAO", reply->property("albumDAO"));
 		return;
 	}
 
