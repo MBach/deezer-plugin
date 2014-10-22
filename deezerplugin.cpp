@@ -449,7 +449,7 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 
 				// in node <album></album>
 				track.setAlbum(this->extract(xml, "title"));
-				track.setIconPath(":/deezer-icon");
+				track.setIcon(":/deezer-icon");
 				tracks.push_back(std::move(track));
 			} else if (xml.name() == "next") {
 				if (index == 0) {
@@ -486,7 +486,8 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 					track.setRating(r);
 					track.setArtist(cachedAlbum->artist());
 					track.setAlbum(cachedAlbum->title());
-					track.setIconPath(":/deezer-icon");
+					track.setHost(_webPlayer->host());
+					track.setIcon(":/deezer-icon");
 					track.setYear(cachedAlbum->year().left(4));
 					tracks.push_back(std::move(track));
 				}
