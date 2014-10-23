@@ -240,7 +240,7 @@ QWebView* WebView::createWindow(QWebPage::WebWindowType)
 		if (!ok) {
 			return;
 		}
-		Settings *s = Settings::getInstance();
+		Settings *s = Settings::instance();
 		QByteArray lba = s->value("DeezerPlugin/l").toByteArray();
 		QByteArray pba = s->value("DeezerPlugin/p").toByteArray();
 

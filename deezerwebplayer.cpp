@@ -15,7 +15,7 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 	_webView->page()->setView(_webView);
 	_webView->page()->mainFrame()->addToJavaScriptWindowObject("dzWebPlayer", this);
 
-	Settings *settings = Settings::getInstance();
+	Settings *settings = Settings::instance();
 
 	// Init callback actions
 	connect(_webView->page()->mainFrame(), &QWebFrame::loadFinished, this, [=]() {

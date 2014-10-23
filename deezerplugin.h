@@ -42,9 +42,7 @@ private:
 	QListView *_tracks;
 	QCheckBox *_checkBox;
 	DeezerWebPlayer *_webPlayer;
-	SqlDatabase *_db;
 
-	//QMap<QString, GenericDAO*> _cache;
 	QMap<QString, AlbumDAO*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
 	QList<QNetworkReply*> _pendingRequest;
@@ -77,9 +75,6 @@ public:
 
 	/** Redefined. */
 	virtual void setSearchDialog(AbstractSearchDialog *w);
-
-	/** Redefined. */
-	virtual void DeezerPlugin::setDatabase(SqlDatabase *db);
 
 	/** Redefined. */
 	virtual void sync(const QString &token) const;
