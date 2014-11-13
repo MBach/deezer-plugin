@@ -33,6 +33,7 @@ DeezerPlugin::DeezerPlugin()
 
 	QWebSettings *s = QWebSettings::globalSettings();
 	/// XXX
+	s->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
 	s->setAttribute(QWebSettings::PluginsEnabled, true);
 	s->setAttribute(QWebSettings::JavascriptEnabled, true);
 	s->setAttribute(QWebSettings::JavascriptCanOpenWindows, true);
@@ -224,10 +225,8 @@ void DeezerPlugin::extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml)
 
 void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QString &dzArtistId, QXmlStreamReader &xml)
 {
-	qDebug() << Q_FUNC_INFO;
 	QList<AlbumDAO*> albums;
 	Settings *settings = Settings::instance();
-	qDebug() << "syncOptions" << settings->value("DeezerPlugin/syncOptions").toStringList();
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
@@ -242,10 +241,7 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 
 				record_type = this->extract(xml, "record_type");
 				if (settings->value("DeezerPlugin/syncOptions").toStringList().contains(record_type)) {
-					qDebug() << "title of album to append" << title;
 					albums.append(album);
-				} else {
-					qDebug() << "title of album to exclude" << title;
 				}
 			}
 		}
@@ -535,9 +531,12 @@ void DeezerPlugin::albumWasDoubleClicked(const QModelIndex &index)
 	}
 }
 
+//#include <QWebFrame>
+
 /** Display everything! */
 void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 {
+	//qDebug() << Q_FUNC_INFO << reply->url();
 	QUrl redirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
 	if (!redirectUrl.isEmpty() && redirectUrl != reply->request().url()) {
 		QNetworkReply *forward = NetworkAccessManager::getInstance()->get(QNetworkRequest(redirectUrl));
@@ -598,6 +597,13 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 		/// TODO
 	} else if (r.startsWith("http://api.deezer.com/")) {
 		qDebug() << "unknown search request" << r;
+	} else if (r.startsWith("https://connect.deezer.com/login.php")) {
+		/*qDebug() << "Connecting" << ba;
+		// find fields "login_mail" "login_password"
+		WebView *webView = _pages.first();
+		if (webView) {
+			webView->page()->mainFrame()->evaluateJavaScript("document.getElementById('login_mail').value = 'test'");
+		}*/
 	} else {
 		if (reply->error() != QNetworkReply::NoError) {
 			qDebug() << "Unknown reply. Code:" << reply->error() << "String:" << reply->errorString();

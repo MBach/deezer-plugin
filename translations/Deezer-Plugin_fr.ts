@@ -68,7 +68,7 @@
 <context>
     <name>WebPage</name>
     <message>
-        <location filename="../webview.cpp" line="123"/>
+        <location filename="../webview.cpp" line="121"/>
         <source>Error loading page: %1</source>
         <translation>Erreur de chargement de la page : %1</translation>
     </message>

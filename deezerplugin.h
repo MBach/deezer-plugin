@@ -36,7 +36,7 @@ public:
 private:
 	Ui::DeezerPluginConfigPage _config;
 	AbstractSearchDialog* _searchDialog;
-	QList<QWebView*> _pages;
+	QList<WebView*> _pages;
 	QListView *_artists;
 	QListView *_albums;
 	QListView *_tracks;
