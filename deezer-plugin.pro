@@ -39,7 +39,8 @@ HEADERS += interfaces/basicplugin.h \
     networkaccessmanager.h \
     remotemediaplayer.h \
     settings.h \
-    webview.h
+    webview.h \
+    model/yeardao.h
 
 SOURCES += autosaver.cpp \
     cookiejar.cpp \

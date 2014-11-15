@@ -33,7 +33,7 @@ DeezerPlugin::DeezerPlugin()
 
 	QWebSettings *s = QWebSettings::globalSettings();
 	/// XXX
-	s->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
+	// s->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
 	s->setAttribute(QWebSettings::PluginsEnabled, true);
 	s->setAttribute(QWebSettings::JavascriptEnabled, true);
 	s->setAttribute(QWebSettings::JavascriptCanOpenWindows, true);

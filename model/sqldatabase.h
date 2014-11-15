@@ -6,6 +6,7 @@
 #include "albumdao.h"
 #include "trackdao.h"
 #include "playlistdao.h"
+#include "yeardao.h"
 
 #include <QFileInfo>
 #include <QSqlDatabase>
@@ -35,6 +36,8 @@ private:
 
 	/** Object than can iterate throught the FileSystem for Audio files. */
 	MusicSearchEngine *_musicSearchEngine;
+
+	QHash<uint, GenericDAO*> _cache;
 
 	Q_ENUMS(extension)
 
@@ -72,19 +75,20 @@ public:
 	 * \param tracksToUpdate 'First' in pair is actual filename, 'Second' is the new filename, but may be empty.*/
 	void updateTracks(const QList<QPair<QString, QString> > &tracksToUpdate);
 
-
 	QString normalizeField(const QString &s) const;
 
 private:
 	/** Read all tracks entries in the database and send them to connected views. */
-	void loadFromFileDB();
+	void loadFromFileDB(bool sendResetSignal = true);
 
 public slots:
 	/** Load an existing database file or recreate it, if not found. */
 	void load();
 
-	/** Safe delete and recreate from scratch (table Tracks only). */
+	/** Delete and rescan local tracks. */
 	void rebuild();
+
+	void rebuild(const QStringList &oldLocations, const QStringList &newLocations);
 
 private slots:
 	/** Reads an external picture which is close to multimedia files (same folder). */
