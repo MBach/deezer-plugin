@@ -4,6 +4,7 @@
 #include "miamcore_global.h"
 #include "interfaces/remotemediaplayerplugin.h"
 #include "model/trackdao.h"
+#include "abstractsearchdialog.h"
 
 #include <QCache>
 #include <QDir>
@@ -34,6 +35,7 @@ public:
 				 RPL_UpdateCacheDatabase = 1};
 
 private:
+	mutable QString _token;
 	Ui::DeezerPluginConfigPage _config;
 	AbstractSearchDialog* _searchDialog;
 	QList<WebView*> _pages;
@@ -66,9 +68,6 @@ public:
 
 	/** Every RemoteMediaPlayerPlugin has to return an implementation of RemoteMediaPlayer class. */
 	inline virtual RemoteMediaPlayer * player() const { return _webPlayer;	}
-
-	/** This plugin has no independant view. */
-	inline virtual QWidget* providesView() { return NULL; }
 
 	/** Release displayed in options. */
 	inline virtual QString version() const { return "0.4"; }

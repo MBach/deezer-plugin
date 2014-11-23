@@ -71,23 +71,17 @@ WebPage::WebPage(QObject *parent)
 
 bool WebPage::acceptNavigationRequest(QWebFrame *, const QNetworkRequest &request, NavigationType)
 {
-	// qDebug() << "acceptNavigationRequest" << request.url();
 	if (request.url().toString().contains("access_token=")) {
 		QString r = request.url().toString();
 		int i = r.indexOf("access_token=");
 		int j = r.mid(i + 13).indexOf('&');
 		QString t = r.mid(i + 13, j);
-		// qDebug() << "token 1:" << t;
 		if (_hasToken == false) {
-			// qDebug() << "token 2:" << t;
+			_hasToken = true;
 			WebView *view = qobject_cast<WebView*>(this->view());
 			if (view) {
 				view->setToken(t);
-			//} else {
-			//	qDebug() << "no view ?";
 			}
-			//emit tokenFound(t);
-			_hasToken = true;
 		}
 	}
 	return true;
@@ -165,7 +159,7 @@ WebView::WebView(QWidget* parent)
 	}
 	setPage(m_page);
 	m_page->setView(this);
-	connect(m_page, &WebPage::tokenFound, this, &WebView::aboutToSyncWithToken);
+	// connect(m_page, &WebPage::tokenFound, this, &WebView::aboutToSyncWithToken);
 	connect(page(), SIGNAL(statusBarMessage(QString)), SLOT(setStatusBarText(QString)));
 	connect(this, SIGNAL(loadProgress(int)), this, SLOT(setProgress(int)));
 	connect(this, SIGNAL(loadFinished(bool)), this, SLOT(loadFinished()));

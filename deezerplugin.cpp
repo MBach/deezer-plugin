@@ -29,6 +29,7 @@ DeezerPlugin::DeezerPlugin()
 
 	// Dispatch replies: search for something, get artist info, get tracks from album, get track info, fetch, synchronize...
 	connect(nam, &QNetworkAccessManager::finished, this, &DeezerPlugin::dispatchReply);
+	// connect(nam, &NetworkAccessManager::syncHasFinished, SqlDatabase::instance(), &SqlDatabase::load);
 	connect(_webPlayer->webView(), &WebView::aboutToSyncWithToken, this, &DeezerPlugin::sync);
 
 	QWebSettings *s = QWebSettings::globalSettings();
@@ -137,14 +138,21 @@ void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 /** Redefined. */
 void DeezerPlugin::sync(const QString &token) const
 {
-	if (!token.isEmpty()) {
-		qDebug() << Q_FUNC_INFO << token;
-		qDebug() << "Ready to synchronize Library with Deezer (fetching remote only)";
+	qDebug() << Q_FUNC_INFO << token;
+	if (!token.isEmpty() || !_token.isEmpty()) {
+		QString t;
+		if (token.isEmpty()) {
+			t = _token;
+		} else {
+			_token = token;
+			t = token;
+		}
+		// Ready to synchronize Library with Deezer (fetching remote only)";
 		// First, get checksum for Artists, Albums and Playlists
 		/// TODO: albums (followers?)
 		NetworkAccessManager *inst = NetworkAccessManager::getInstance();
-		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + token)));
-		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/playlists?output=xml&access_token=" + token)));
+		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/artists?output=xml&access_token=" + t)));
+		inst->get(QNetworkRequest(QUrl("http://api.deezer.com/user/me/playlists?output=xml&access_token=" + t)));
 		inst->setSync(true);
 	}
 }
@@ -254,7 +262,7 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 		album->setArtist(artist);
 		// album->setHost(_webPlayer->host());
 		album->setIcon(":/deezer-icon2");
-		bool ok = db->insertIntoTableAlbums(artistId, *album);
+		bool ok = db->insertIntoTableAlbums(artistId, album);
 
 		// Finally, extract track list
 		/// XXX: too much requests?
@@ -315,14 +323,14 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 	bool needToSyncArtists = false;
 	QVariant checkSum = settings->value("DeezerPlugin/artists/checksum");
 	QString sum;
-	QList<ArtistDAO> artists;
+	QList<ArtistDAO*> artists;
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
 			if (xml.name() == "artist") {
-				ArtistDAO artist;
-				artist.setId(this->extract(xml, "id"));
-				artist.setTitle(this->extract(xml, "name"));
+				ArtistDAO *artist = new ArtistDAO;
+				artist->setId(this->extract(xml, "id"));
+				artist->setTitle(this->extract(xml, "name"));
 				artists.append(artist);
 			}
 			if (xml.name() == "checksum") {
@@ -340,11 +348,11 @@ void DeezerPlugin::extractSynchronizedArtists(QXmlStreamReader &xml)
 		db->removeRecordsFromHost(this->name());
 		bool ok = true;
 		for (int i = 0; i < artists.size(); i++) {
-			ArtistDAO artist = artists.at(i);
+			ArtistDAO *artist = artists.at(i);
 			if (db->insertIntoTableArtists(artist)) {
-				QNetworkRequest r(QUrl("http://api.deezer.com/artist/" + artist.id() + "/albums?output=xml"));
+				QNetworkRequest r(QUrl("http://api.deezer.com/artist/" + artist->id() + "/albums?output=xml"));
 				QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
-				reply->setProperty("artist", artist.title());
+				reply->setProperty("artist", artist->title());
 				_repliesWhichInteractWithUi.insert(reply, RPL_UpdateCacheDatabase);
 			} else {
 				ok = false;
