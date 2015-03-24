@@ -45,20 +45,16 @@ public:
 	/** Singleton pattern to be able to easily use settings everywhere in the app. */
 	static SqlDatabase* instance();
 
-	enum InsertPolicy { IP_Artists			= 0,
-						IP_Albums			= 1,
-						IP_ArtistsAlbums	= 2,
-						IP_Years			= 3 };
-
 	bool insertIntoTableArtists(ArtistDAO *artist);
 	bool insertIntoTableAlbums(uint artistId, AlbumDAO *album);
-	bool insertIntoTablePlaylistTracks(int playlistId, const std::list<TrackDAO> &tracks);
-	int  insertIntoTablePlaylists(const PlaylistDAO &playlist);
+	int  insertIntoTablePlaylists(const PlaylistDAO &playlist, const std::list<TrackDAO> &tracks, bool isOverwriting);
+	bool insertIntoTablePlaylistTracks(int playlistId, const std::list<TrackDAO> &tracks, bool isOverwriting = false);
 	bool insertIntoTableTracks(const TrackDAO &track);
 	bool insertIntoTableTracks(const std::list<TrackDAO> &tracks);
 
-	void removeRecordsFromHost(const QString &);
-	void removePlaylists(const QList<PlaylistDAO> &playlists);
+	void removeRecordsFromHost(const QString &host);
+	bool removePlaylists(const QList<PlaylistDAO> &playlists);
+	void removePlaylistsFromHost(const QString &host);
 
 	Cover *selectCoverFromURI(const QString &uri);
 	QList<TrackDAO> selectPlaylistTracks(int playlistID);
@@ -99,6 +95,7 @@ private slots:
 
 signals:
 	void aboutToLoad();
+	void aboutToResyncRemoteSources();
 	void coverWasUpdated(const QFileInfo &);
 	void loaded();
 	void progressChanged(const int &);

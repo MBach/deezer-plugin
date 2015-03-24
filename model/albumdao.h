@@ -19,6 +19,8 @@ public:
 
 	AlbumDAO(const AlbumDAO &remoteAlbum);
 
+	AlbumDAO& operator=(const AlbumDAO& other);
+
 	virtual ~AlbumDAO();
 
 	QString artist() const;

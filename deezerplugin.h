@@ -20,7 +20,7 @@ class QWebView;
 /**
  * \brief       Deezer plugin
  * \author      Matthieu Bachelier
- * \version     0.4
+ * \version     0.5
  * \copyright   GNU General Public License v3
  */
 class DeezerPlugin : public QObject, public RemoteMediaPlayerPlugin
@@ -57,8 +57,10 @@ public:
 	/** Default destructor. */
 	virtual ~DeezerPlugin();
 
+	virtual void cleanUpBeforeDestroy() override;
+
 	/** Load and return user interface to manipulate this plugin. */
-	virtual QWidget* configPage();
+	virtual QWidget* configPage() override;
 
 	/** This plugin can be configurable in options. */
 	inline virtual bool isConfigurable() const { return true; }
@@ -70,22 +72,22 @@ public:
 	inline virtual RemoteMediaPlayer * player() const { return _webPlayer;	}
 
 	/** Release displayed in options. */
-	inline virtual QString version() const { return "0.4"; }
+	inline virtual QString version() const { return "0.5"; }
 
 	/** Redefined. */
-	virtual void setSearchDialog(AbstractSearchDialog *w);
+	virtual void setSearchDialog(AbstractSearchDialog *w) override;
 
 	/** Redefined. */
-	virtual void sync(const QString &token) const;
+	virtual void sync(const QString &token) const override;
 
 protected:
 	/** Redefined to open Deezer's home page. */
-	bool eventFilter(QObject *obj, QEvent *event);
+	bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
 	QString extract(QXmlStreamReader &xml, const QString &criterion);
 	void extractAlbum(QNetworkReply *reply, QXmlStreamReader &xml);
-	void extractAlbumListFromArtist(QNetworkReply *reply, const QString &dzArtistId, QXmlStreamReader &xml);
+	void extractAlbumListFromArtist(QNetworkReply *reply, const QString &, QXmlStreamReader &xml);
 	void extractImageForPlaylist(const QUrl &url, QByteArray &ba);
 	void extractImageCoverForLibrary(const QUrl &url, const QVariant &va, QByteArray &ba);
 	void extractSynchronizedArtists(QXmlStreamReader &xml);
