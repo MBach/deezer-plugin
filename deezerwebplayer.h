@@ -19,16 +19,31 @@ private:
 	// Javascript SDK has no "stop" behaviour
 	bool _stopButtonWasTriggered;
 
+	qint64 _pos;
+	qint64 _time;
+
 public:
 	explicit DeezerWebPlayer(DeezerPlugin *parent);
 
 	inline virtual QString host() const override { return "www.deezer.com"; }
 
-	virtual float position() const override { return 0; }
+	/** Current media length in ms. */
+	virtual int length() const override;
 
-	virtual void setTime(int) override { /** TODO */ }
+	/** The position in the current media being played. Percent-based. */
+	/// TODO
+	virtual float position() const override;
+
+	virtual void setMute(bool b) override;
+
+	inline virtual void setPosition(qint64 pos) override { _pos = pos; }
+
+	inline virtual void setTime(qint64 t) override { _time = t; }
 
 	WebView * webView() const { return _webView; }
+
+	/** The current volume of this remote player. */
+	virtual int volume() const override;
 
 public slots:
 	virtual void pause() override;

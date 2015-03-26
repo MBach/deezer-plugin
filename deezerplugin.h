@@ -45,7 +45,7 @@ private:
 	QCheckBox *_checkBox;
 	DeezerWebPlayer *_webPlayer;
 
-	QMap<QString, AlbumDAO*> _cache;
+	QMap<QString, GenericDAO*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
 	QList<QNetworkReply*> _pendingRequest;
 	QDir _cachePath;

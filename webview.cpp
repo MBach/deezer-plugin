@@ -152,10 +152,10 @@ WebView::WebView(QWidget* parent)
 	m_page->setNetworkAccessManager(NetworkAccessManager::getInstance());
 	if (m_page->mainFrame()) {
 		/// XXX: crash sometimes in Release mode, always in Debug ???
-		m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "https://www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
-		m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("http://", "http://www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
-		m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
-		m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("http://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
+		//m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "https://www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
+		//m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("http://", "http://www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
+		//m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
+		//m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("http://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
 	}
 	setPage(m_page);
 	m_page->setView(this);
