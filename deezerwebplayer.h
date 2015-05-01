@@ -31,14 +31,17 @@ public:
 	virtual int length() const override;
 
 	/** The position in the current media being played. Percent-based. */
-	/// TODO
 	virtual float position() const override;
 
 	virtual void setMute(bool b) override;
 
 	inline virtual void setPosition(qint64 pos) override { _pos = pos; }
 
+	/** Sets the time in ms in the current media being played (<= length()). */
 	inline virtual void setTime(qint64 t) override { _time = t; }
+
+	/** The time in ms in the current media being played (<= length()). */
+	inline qint64 time() const override { return _time; }
 
 	WebView * webView() const { return _webView; }
 

@@ -90,6 +90,7 @@ private:
 	void extractAlbumListFromArtist(QNetworkReply *reply, const QString &, QXmlStreamReader &xml);
 	void extractImageForPlaylist(const QUrl &url, QByteArray &ba);
 	void extractImageCoverForLibrary(const QUrl &url, const QVariant &va, QByteArray &ba);
+	void extractSynchronizedAlbums(QXmlStreamReader &xml);
 	void extractSynchronizedArtists(QXmlStreamReader &xml);
 	void extractSynchronizedPlaylists(QXmlStreamReader &xml);
 	void extractSynchronizedTracksFromPlaylists(const QString &playlistId, QXmlStreamReader &xml, int index = 0);

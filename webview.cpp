@@ -135,8 +135,7 @@ void WebPage::handleUnsupportedContent(QNetworkReply *reply)
 			frame->setHtml(html, reply->url());
 			return;
 		}
-		QList<QWebFrame *> children = frame->childFrames();
-		foreach(QWebFrame *frame, children)
+		for (QWebFrame *frame : frame->childFrames())
 			frames.append(frame);
 	}
 	if (m_loadingUrl == reply->url()) {
