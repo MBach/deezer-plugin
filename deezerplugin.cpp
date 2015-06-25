@@ -320,7 +320,7 @@ void DeezerPlugin::extractImageForPlaylist(const QUrl &url, QByteArray &ba)
 	QString playlistImage = _cachePath.absolutePath() + "/playlist_" + playlistId + ".jpg";
 	img.save(playlistImage);
 
-	SqlDatabase::instance()->updateTablePlaylistWithBackgroundImage(playlistId.toInt(), playlistImage);
+	SqlDatabase::instance()->updateTablePlaylistWithBackgroundImage(playlistId.toUInt(), playlistImage);
 }
 
 void DeezerPlugin::extractImageCoverForLibrary(const QUrl &url, const QVariant &va, QByteArray &ba)
@@ -473,7 +473,7 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 
 				// Extract picture in another request
 				QString picture = this->extract(xml, "picture");
-				if (!picture.isEmpty() && !db->playlistHasBackgroundImage(playlist.id().toInt())) {
+				if (!picture.isEmpty() && !db->playlistHasBackgroundImage(playlist.id().toUInt())) {
 					qDebug() << "picture was found and no bg was found in database";
 					QNetworkRequest r(QUrl("http://api.deezer.com/playlist/" + playlist.id() + "/image?size=big"));
 					QNetworkReply *reply = NetworkAccessManager::getInstance()->get(r);
@@ -492,7 +492,9 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 		}
 	}
 	if (needToSyncPlaylists) {
-		db->removePlaylists(playlists);
+		for (PlaylistDAO dao : playlists) {
+			db->removePlaylist(dao.id().toUInt());
+		}
 		bool ok = true;
 		for (int i = 0; i < playlists.size(); i++) {
 			PlaylistDAO playlist = playlists.at(i);
@@ -548,7 +550,7 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 			}
 		}
 	}
-	SqlDatabase::instance()->insertIntoTablePlaylistTracks(playlistId.toInt(), tracks);
+	SqlDatabase::instance()->insertIntoTablePlaylistTracks(playlistId.toUInt(), tracks);
 }
 
 void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString &dzAlbumId, QXmlStreamReader &xml)
@@ -557,7 +559,7 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 	if (_cache.contains(dzAlbumId)) {
 
 		AlbumDAO *cachedAlbum = static_cast<AlbumDAO*>(_cache.value(dzAlbumId));
-		qDebug() << "cachedAlbum" << cachedAlbum;
+		qDebug() << "cachedAlbum" << cachedAlbum->title();
 		while (!xml.atEnd() && !xml.hasError()) {
 			QXmlStreamReader::TokenType token = xml.readNext();
 			if (token == QXmlStreamReader::StartElement) {

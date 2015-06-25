@@ -49,33 +49,37 @@ public:
 
 	bool insertIntoTableArtists(ArtistDAO *artist);
 	bool insertIntoTableAlbums(uint artistId, AlbumDAO *album);
-	int  insertIntoTablePlaylists(const PlaylistDAO &playlist, const std::list<TrackDAO> &tracks, bool isOverwriting);
-	bool insertIntoTablePlaylistTracks(int playlistId, const std::list<TrackDAO> &tracks, bool isOverwriting = false);
+	uint insertIntoTablePlaylists(const PlaylistDAO &playlist, const std::list<TrackDAO> &tracks, bool isOverwriting);
+	bool insertIntoTablePlaylistTracks(uint playlistId, const std::list<TrackDAO> &tracks, bool isOverwriting = false);
 	bool insertIntoTableTracks(const TrackDAO &track);
 	bool insertIntoTableTracks(const std::list<TrackDAO> &tracks);
 
-	bool removePlaylists(const QList<PlaylistDAO> &playlists);
+	bool removePlaylist(uint playlistId);
 	void removePlaylistsFromHost(const QString &host);
 	void removeRecordsFromHost(const QString &host);
 
 	Cover *selectCoverFromURI(const QString &uri);
-	QList<TrackDAO> selectPlaylistTracks(int playlistID);
-	PlaylistDAO selectPlaylist(int playlistId);
+	QList<TrackDAO> selectPlaylistTracks(uint playlistID);
+	PlaylistDAO selectPlaylist(uint playlistId);
 	QList<PlaylistDAO> selectPlaylists();
-	TrackDAO selectTrack(const QString &uri);
 
-	bool playlistHasBackgroundImage(int playlistID);
-	void updateTablePlaylistWithBackgroundImage(int playlistID, const QString &backgroundImagePath);
+	ArtistDAO* selectArtist(uint artistId);
+	TrackDAO selectTrackByURI(const QString &uri);
+
+	bool playlistHasBackgroundImage(uint playlistID);
+	bool updateTablePlaylist(const PlaylistDAO &playlist);
+	void updateTablePlaylistWithBackgroundImage(uint playlistID, const QString &backgroundImagePath);
 	void updateTableAlbumWithCoverImage(const QString &coverPath, const QString &album, const QString &artist);
 
-	/**
-	 * Update a list of tracks. If track name has changed, it will be removed from Library then added right after.
-	 * \param tracksToUpdate 'First' in pair is actual filename, 'Second' is the new filename, but may be empty.*/
-	void updateTracks(const QList<QPair<QString, QString> > &tracksToUpdate);
+	/** Update a list of tracks. If track name has changed, it will be removed from Library then added right after. */
+	void updateTracks(const QStringList &oldPaths, const QStringList &newPaths);
 
 	QString normalizeField(const QString &s) const;
 
 private:
+	/** When one has manually updated tracks with TagEditor, some nodes might in unstable state. */
+	bool cleanNodesWithoutTracks();
+
 	/** Read all tracks entries in the database and send them to connected views. */
 	void loadFromFileDB(bool sendResetSignal = true);
 
@@ -104,6 +108,9 @@ signals:
 
 	void nodeExtracted(GenericDAO *node);
 	void aboutToUpdateNode(GenericDAO *node);
+
+	//void aboutToUpdateView(const QList<FileHelper*> &olds, const QList<FileHelper*> &news);
+	void aboutToCleanView();
 };
 
 #endif // SQLDATABASE_H

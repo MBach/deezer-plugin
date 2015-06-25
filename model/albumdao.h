@@ -43,6 +43,8 @@ public:
 
 	QString year() const;
 	void setYear(const QString &year);
+
+	virtual uint hash() const;
 };
 
 /** Register this class to convert in QVariant. */
