@@ -58,7 +58,7 @@
 
 #include <QThread>
 
-NetworkAccessManager* NetworkAccessManager::networkAccessManager = NULL;
+NetworkAccessManager* NetworkAccessManager::networkAccessManager = nullptr;
 
 NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	: QNetworkAccessManager(parent),
@@ -91,7 +91,7 @@ NetworkAccessManager::NetworkAccessManager(QObject *parent)
 
 NetworkAccessManager* NetworkAccessManager::getInstance()
 {
-	if (networkAccessManager == NULL) {
+	if (networkAccessManager == nullptr) {
 		networkAccessManager = new NetworkAccessManager;
 	}
 	return networkAccessManager;

@@ -20,8 +20,8 @@
 
 /** Default constructor. */
 DeezerPlugin::DeezerPlugin()
-	: QObject(), _artists(NULL), _albums(NULL), _tracks(NULL), _searchDialog(NULL),
-	  _checkBox(NULL), _webPlayer(new DeezerWebPlayer(this))
+	: QObject(), _artists(nullptr), _albums(nullptr), _tracks(nullptr), _searchDialog(nullptr),
+	  _checkBox(nullptr), _webPlayer(new DeezerWebPlayer(this))
 {
 	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
 	nam->setCookieJar(new CookieJar);
@@ -73,7 +73,7 @@ DeezerPlugin::~DeezerPlugin()
 	qDebug() << Q_FUNC_INFO;
 	for (QWebView *view : _pages) {
 		delete view;
-		view = NULL;
+		view = nullptr;
 	}
 	_pages.clear();
 	if (_checkBox) {
