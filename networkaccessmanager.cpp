@@ -62,7 +62,7 @@ NetworkAccessManager* NetworkAccessManager::networkAccessManager = nullptr;
 
 NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	: QNetworkAccessManager(parent),
-	_requestCount(0), _timer(new QTimer(this)), _isSync(false)
+	_timer(new QTimer(this)), _isSync(false), _requestCount(0)
 {
 	connect(this, &QNetworkAccessManager::sslErrors, this, &NetworkAccessManager::ignoreSslErrors);
 	connect(this, &QNetworkAccessManager::finished, this, [=]() {

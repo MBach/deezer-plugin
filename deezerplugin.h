@@ -37,12 +37,12 @@ public:
 private:
 	mutable QString _token;
 	Ui::DeezerPluginConfigPage _config;
-	AbstractSearchDialog* _searchDialog;
 	QList<WebView*> _pages;
 	QListView *_artists;
 	QListView *_albums;
 	QListView *_tracks;
 	QCheckBox *_checkBox;
+	AbstractSearchDialog* _searchDialog;
 	DeezerWebPlayer *_webPlayer;
 
 	QMap<QString, GenericDAO*> _cache;

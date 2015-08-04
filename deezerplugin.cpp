@@ -20,8 +20,8 @@
 
 /** Default constructor. */
 DeezerPlugin::DeezerPlugin()
-	: QObject(), _artists(nullptr), _albums(nullptr), _tracks(nullptr), _searchDialog(nullptr),
-	  _checkBox(nullptr), _webPlayer(new DeezerWebPlayer(this))
+	: QObject(), _artists(nullptr), _albums(nullptr), _tracks(nullptr), _checkBox(nullptr),
+	  _searchDialog(nullptr), _webPlayer(new DeezerWebPlayer(this))
 {
 	NetworkAccessManager *nam = NetworkAccessManager::getInstance();
 	nam->setCookieJar(new CookieJar);
@@ -118,13 +118,21 @@ QWidget* DeezerPlugin::configPage()
 	connect(_config.openConnectPopup, &QPushButton::clicked, this, &DeezerPlugin::login);
 	connect(_config.syncArtistsEPCheckbox, &QCheckBox::toggled, this, [=](bool b) {
 		QStringList l = settings->value("DeezerPlugin/syncOptions").toStringList();
-		b ? l.append("ep") : l.removeAll("ep");
+		if (b) {
+			l.append("ep");
+		} else {
+			l.removeAll("ep");
+		}
 		settings->setValue("DeezerPlugin/syncOptions", l);
 		settings->setValue("DeezerPlugin/syncArtistsEPCheckbox", b);
 	});
 	connect(_config.syncArtistsSinglesCheckbox, &QCheckBox::toggled, this, [=](bool b) {
 		QStringList l = settings->value("DeezerPlugin/syncOptions").toStringList();
-		b ? l.append("single") : l.removeAll("single");
+		if (b) {
+			l.append("single");
+		} else {
+			l.removeAll("single");
+		}
 		settings->setValue("DeezerPlugin/syncOptions", l);
 		settings->setValue("DeezerPlugin/syncArtistsSinglesCheckbox", b);
 	});
@@ -195,9 +203,9 @@ QString DeezerPlugin::extract(QXmlStreamReader &xml, const QString &criterion)
 {
 	while (xml.name() != criterion && !xml.hasError()) {
 		QXmlStreamReader::TokenType t = xml.readNext();
-		//if (!isEager && t == QXmlStreamReader::EndElement) {
-		//	break;
-		//}
+		if (/*!isEager &&*/ t == QXmlStreamReader::EndElement) {
+			break;
+		}
 	}
 	return xml.readElementText();
 }
@@ -593,9 +601,9 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 				emit aboutToProcessRemoteTracks(tracks);
 				break;
 
-			//case RPL_UpdateCacheDatabase:
+			case RPL_UpdateCacheDatabase:
 			//	this->updateCacheDatabase(tracks);
-			//	break;
+				break;
 			}
 			// qDebug() << "removing reply" << reply->url();
 			_repliesWhichInteractWithUi.remove(reply);
