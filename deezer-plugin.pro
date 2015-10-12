@@ -9,7 +9,7 @@ DEFINES += MIAM_PLUGIN
 CONFIG  += c++11
 # TODO: how to minimize hardcoded paths?
 win32 {
-    MiamPlayerBuildDirectory = C:\dev\Miam-Player-build-x64\MiamPlayer
+    MiamPlayerBuildDirectory = C:\dev\Miam-Player-build\qt5.5.1\MiamPlayer
     CONFIG(debug, debug|release) {
         target.path = $$MiamPlayerBuildDirectory\debug\plugins
         LIBS += -Ldebug -lMiamCore
@@ -43,9 +43,9 @@ HEADERS += interfaces/basicplugin.h \
     deezerplugin.h \
     deezerwebplayer.h \
     filehelper.h \
+    imediaplayer.h \
     miamcore_global.h \
     networkaccessmanager.h \
-    remotemediaplayer.h \
     settings.h \
     webview.h
 

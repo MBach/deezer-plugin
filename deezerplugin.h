@@ -69,7 +69,7 @@ public:
 	inline virtual QString name() const { return "Deezer-Plugin"; }
 
 	/** Every RemoteMediaPlayerPlugin has to return an implementation of RemoteMediaPlayer class. */
-	inline virtual RemoteMediaPlayer * player() const { return _webPlayer;	}
+    inline virtual IMediaPlayer * player() const { return _webPlayer;	}
 
 	/** Release displayed in options. */
 	inline virtual QString version() const { return "0.5"; }

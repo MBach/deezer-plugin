@@ -7,7 +7,7 @@
 #include <QtDebug>
 
 DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
-	RemoteMediaPlayer(parent), _webView(new WebView),  _deezerPlugin(parent), _stopButtonWasTriggered(false)
+    IMediaPlayer(parent), _webView(new WebView),  _deezerPlugin(parent), _stopButtonWasTriggered(false)
   , _pos(0), _time(0)
 {
 	/// FIXME: how to play sound with invisible webView?
@@ -47,22 +47,18 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent) :
 }
 
 /** Current media length in ms. */
-int DeezerWebPlayer::length() const
+qint64 DeezerWebPlayer::duration() const
 {
 	QVariant l = _webView->page()->mainFrame()->evaluateJavaScript("DZ.player.getCurrentTrack().duration * 1000; ");
 	qDebug() << Q_FUNC_INFO << l;
-	if (l.isValid()) {
-		return l.toInt();
-	} else {
-		return 0;
-	}
+    return l.toLongLong();
 }
 
 /** The position in the current media being played. Percent-based. */
-float DeezerWebPlayer::position() const
+qreal DeezerWebPlayer::position() const
 {
 	if (_time > 0) {
-		return _pos / (float) _time;
+        return _pos / (qreal) _time;
 	} else {
 		return 0;
 	}
@@ -79,13 +75,13 @@ void DeezerWebPlayer::setMute(bool b)
 	qDebug() << Q_FUNC_INFO << v;
 }
 
-int DeezerWebPlayer::volume() const
+qreal DeezerWebPlayer::volume() const
 {
 	QVariant v = _webView->page()->mainFrame()->evaluateJavaScript("DZ.player.getVolume();");
 	if (v.isValid()) {
-		return v.toInt();
+        return v.toReal();
 	} else {
-		return 75;
+        return 0.75;
 	}
 }
 
@@ -116,7 +112,7 @@ void DeezerWebPlayer::seek(float pos)
 	_webView->page()->mainFrame()->evaluateJavaScript("DZ.player.pause(); DZ.player.seek(" + QString::number(pos * 100) + ");");
 }
 
-void DeezerWebPlayer::setVolume(int volume)
+void DeezerWebPlayer::setVolume(qreal volume)
 {
 	_webView->page()->mainFrame()->evaluateJavaScript("DZ.player.setVolume(" + QString::number(volume) + ");");
 }

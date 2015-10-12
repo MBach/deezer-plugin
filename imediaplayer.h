@@ -1,32 +1,32 @@
-#ifndef REMOTEMEDIAPLAYER_H
-#define REMOTEMEDIAPLAYER_H
+#ifndef IMEDIAPLAYER_H
+#define IMEDIAPLAYER_H
 
 #include <QObject>
 #include "miamcore_global.h"
 
 /**
- * \brief		RemoteMediaPlayer class is a pure virtual class implemented by plugins.
+ * \brief		IMediaPlayer class is a pure virtual class implemented by plugins.
  * \details		When one wants to extend this player by enabling remote playing, it must use this interface.
  *				Signals are already connected to MediaPlayer class which acts as a dispatcher.
  * \author      Matthieu Bachelier
  * \copyright   GNU General Public License v3
  */
-class MIAMCORE_LIBRARY RemoteMediaPlayer : public QObject
+class MIAMCORE_LIBRARY IMediaPlayer : public QObject
 {
 	Q_OBJECT
 public:
-	explicit RemoteMediaPlayer(QObject *parent = 0) : QObject(parent) {}
+	explicit IMediaPlayer(QObject *parent = 0) : QObject(parent) {}
 
-	virtual ~RemoteMediaPlayer() {}
+	virtual ~IMediaPlayer() {}
 
 	/** The host acts as a key to play medias, like http://www.my-favourite-streaming-website.com/. */
 	virtual QString host() const = 0;
 
 	/** Current media length in ms. */
-	virtual int length() const = 0;
+	virtual qint64 duration() const = 0;
 
 	/** The position in the current media being played. Percent-based. */
-	virtual float position() const = 0;
+	virtual qreal position() const = 0;
 
 	virtual void setMute(bool b) = 0;
 
@@ -38,7 +38,7 @@ public:
 	virtual qint64 time() const = 0;
 
 	/** The current volume of this remote player. */
-	virtual int volume() const = 0;
+	virtual qreal volume() const = 0;
 
 public slots:
 	/// Must be implemented in derived class
@@ -46,7 +46,7 @@ public slots:
 	virtual void play(const QUrl &track) = 0;
 	virtual void resume() = 0;
 	virtual void seek(float pos) = 0;
-	virtual void setVolume(int volume) = 0;
+	virtual void setVolume(qreal volume) = 0;
 	virtual void stop() = 0;
 
 signals:
@@ -66,4 +66,4 @@ signals:
 	void trackHasEnded();
 };
 
-#endif // REMOTEMEDIAPLAYER_H
+#endif // IMEDIAPLAYER_H
