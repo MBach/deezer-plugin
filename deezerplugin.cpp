@@ -284,6 +284,9 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 	}
 	QString artist = reply->property("artist").toString();
 	SqlDatabase *db = SqlDatabase::instance();
+	db->open();
+	db->setPragmas();
+
 	uint artistId = qHash(db->normalizeField(artist));
 	for (int i = 0; i < albums.size(); i++) {
 		AlbumDAO *album = albums.at(i);
@@ -328,7 +331,7 @@ void DeezerPlugin::extractImageForPlaylist(const QUrl &url, QByteArray &ba)
 	QString playlistImage = _cachePath.absolutePath() + "/playlist_" + playlistId + ".jpg";
 	img.save(playlistImage);
 
-	SqlDatabase::instance()->updateTablePlaylistWithBackgroundImage(playlistId.toUInt(), playlistImage);
+	//SqlDatabase::instance()->updateTablePlaylistWithBackgroundImage(playlistId.toUInt(), playlistImage);
 }
 
 void DeezerPlugin::extractImageCoverForLibrary(const QUrl &url, const QVariant &va, QByteArray &ba)
@@ -383,6 +386,8 @@ void DeezerPlugin::extractSynchronizedAlbums(QXmlStreamReader &xml)
 	}
 	if (needToSyncAlbums) {
 		SqlDatabase *db = SqlDatabase::instance();
+		db->open();
+		db->setPragmas();
 		//db->removeRecordsFromHost(_webPlayer->host());
 		bool ok = true;
 		for (int i = 0; i < albums.size(); i++) {
@@ -469,6 +474,8 @@ void DeezerPlugin::extractSynchronizedPlaylists(QXmlStreamReader &xml)
 	QString sum;
 	QList<PlaylistDAO> playlists;
 	SqlDatabase *db = SqlDatabase::instance();
+	db->open();
+	db->setPragmas();
 	while(!xml.atEnd() && !xml.hasError()) {
 		QXmlStreamReader::TokenType token = xml.readNext();
 		if (token == QXmlStreamReader::StartElement) {
