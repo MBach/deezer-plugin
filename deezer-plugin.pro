@@ -5,9 +5,10 @@ TEMPLATE = lib
 
 DEFINES += MIAM_PLUGIN
 
+CONFIG  += c++11
+
 win32 {
     MiamPlayerBuildDirectory = C:\dev\Miam-Player-build\src\Player
-    CONFIG  += c++11
     CONFIG(debug, debug|release) {
 	target.path = $$MiamPlayerBuildDirectory\debug\plugins
 	LIBS += -Ldebug -lCore
@@ -20,11 +21,10 @@ win32 {
 }
 
 unix {
-    MiamPlayerBuildDirectory = /home/mbach/Miam-Player/build-MiamProject-Desktop_Qt_5_5_0_GCC_64bit-Release
+    MiamPlayerBuildDirectory = /usr/bin
     LIBS += -L$$MiamPlayerBuildDirectory/MiamCore/ -lmiam-core
-    CONFIG += c++11
     QMAKE_CXXFLAGS += -std=c++11
-    target.path = $$MiamPlayerBuildDirectory/MiamPlayer/plugins
+    target.path = $$MiamPlayerBuildDirectory/plugins
 }
 
 INSTALLS += target

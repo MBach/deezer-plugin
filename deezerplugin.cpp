@@ -217,10 +217,10 @@ bool DeezerPlugin::eventFilter(QObject *obj, QEvent *event)
 QString DeezerPlugin::extract(QXmlStreamReader &xml, const QString &criterion)
 {
 	while (xml.name() != criterion && !xml.hasError()) {
-		/*QXmlStreamReader::TokenType t = */xml.readNext();
-		//if (!isEager && t == QXmlStreamReader::EndElement) {
-		//	break;
-		//}
+		QXmlStreamReader::TokenType t = xml.readNext();
+		if (/*!isEager &&*/ t == QXmlStreamReader::EndElement) {
+			break;
+		}
 	}
 	return xml.readElementText();
 }
@@ -401,7 +401,7 @@ void DeezerPlugin::extractSynchronizedAlbums(QXmlStreamReader &xml)
 	}
 	if (needToSyncAlbums) {
 		SqlDatabase db;
-		//db->removeRecordsFromHost(_webPlayer->host());
+		//db.removeRecordsFromHost(_webPlayer->host());
 		bool ok = true;
 		for (int i = 0; i < albums.size(); i++) {
 			AlbumDAO *album = albums.at(i);
@@ -624,9 +624,9 @@ void DeezerPlugin::extractTrackListFromAlbum(QNetworkReply *reply, const QString
 				emit aboutToProcessRemoteTracks(tracks);
 				break;
 
-			//case RPL_UpdateCacheDatabase:
+			case RPL_UpdateCacheDatabase:
 			//	this->updateCacheDatabase(tracks);
-			//	break;
+				break;
 			default:
 				break;
 			}
