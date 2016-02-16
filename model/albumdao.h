@@ -12,10 +12,11 @@ class MIAMCORE_LIBRARY AlbumDAO : public GenericDAO
 {
 	Q_OBJECT
 private:
-	QString _artist, _disc, _cover, _length, _source, _uri, _year;
+	QString _artist, _artistNormalized, _disc, _cover, _length, _source, _uri, _year;
+	uint _artistID;
 
 public:
-	explicit AlbumDAO(QObject *parentNode = 0);
+	explicit AlbumDAO(QObject *parent = nullptr);
 
 	AlbumDAO(const AlbumDAO &remoteAlbum);
 
@@ -23,8 +24,14 @@ public:
 
 	virtual ~AlbumDAO();
 
+	uint artistID() const;
+	void setArtistID(const uint &artistID);
+
 	QString artist() const;
 	void setArtist(const QString &artist);
+
+	QString artistNormalized() const;
+	void setArtistNormalized(const QString &artistNormalized);
 
 	QString disc() const;
 	void setDisc(const QString &disc);
@@ -44,7 +51,7 @@ public:
 	QString year() const;
 	void setYear(const QString &year);
 
-	virtual uint hash() const;
+	virtual uint hash() const override;
 };
 
 /** Register this class to convert in QVariant. */

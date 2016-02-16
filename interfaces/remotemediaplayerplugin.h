@@ -2,21 +2,30 @@
 #define REMOTEMEDIAPLAYERPLUGIN_H
 
 #include "basicplugin.h"
-#include "remotemediaplayer.h"
+#include "imediaplayer.h"
 
 #include <QStandardItem>
 #include <QListView>
 
+/// Forward declaration
 class AbstractSearchDialog;
 
+/**
+ * \brief		The RemoteMediaPlayerPlugin class
+ * \author      Matthieu Bachelier
+ * \copyright   GNU General Public License v3
+ */
 class MIAMCORE_LIBRARY RemoteMediaPlayerPlugin : public BasicPlugin
 {
+	Q_OBJECT
 public:
+	explicit RemoteMediaPlayerPlugin(QObject *parent = nullptr) : BasicPlugin(parent) {}
+
 	virtual ~RemoteMediaPlayerPlugin() {}
 
 	virtual void setSearchDialog(AbstractSearchDialog *dialog) = 0;
 
-	virtual RemoteMediaPlayer * player() const = 0;
+	virtual IMediaPlayer * player() const = 0;
 
 	virtual void sync(const QString &token) const = 0;
 };

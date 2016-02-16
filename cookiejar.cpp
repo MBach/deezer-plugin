@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2013 Digia Plc and/or its subsidiary(-ies).
-** Contact: http://www.qt-project.org/legal
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the demonstration applications of the Qt Toolkit.
 **
@@ -10,27 +10,27 @@
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and Digia.  For licensing terms and
-** conditions see http://qt.digia.com/licensing.  For further information
-** use the contact form at http://qt.digia.com/contact-us.
+** a written agreement between you and The Qt Company. For licensing terms
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 2.1 as published by the Free Software
 ** Foundation and appearing in the file LICENSE.LGPL included in the
-** packaging of this file.  Please review the following information to
+** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 2.1 requirements
 ** will be met: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** In addition, as a special exception, Digia gives you certain additional
-** rights.  These rights are described in the Digia Qt LGPL Exception
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
 ** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
 ** General Public License version 3.0 as published by the Free Software
 ** Foundation and appearing in the file LICENSE.GPL included in the
-** packaging of this file.  Please review the following information to
+** packaging of this file. Please review the following information to
 ** ensure the GNU General Public License version 3.0 requirements will be
 ** met: http://www.gnu.org/copyleft/gpl.html.
 **
@@ -59,7 +59,7 @@
 #include <QtCore/QSortFilterProxyModel>
 #include <QtNetwork/QNetworkCookie>
 
-#include <QWebSettings>
+#include <QWebEngineSettings>
 
 #include <QtCore/QDebug>
 
@@ -87,7 +87,7 @@ QDataStream &operator>>(QDataStream &stream, QList<QNetworkCookie> &list)
 
 	quint32 count;
 	stream >> count;
-	for(quint32 i = 0; i < count; ++i)
+	for (quint32 i = 0; i < count; ++i)
 	{
 		QByteArray value;
 		stream >> value;
@@ -227,13 +227,6 @@ QList<QNetworkCookie> CookieJar::cookiesForUrl(const QUrl &url) const
 	CookieJar *that = const_cast<CookieJar*>(this);
 	if (!m_loaded)
 		that->load();
-
-	QWebSettings *globalSettings = QWebSettings::globalSettings();
-	if (globalSettings->testAttribute(QWebSettings::PrivateBrowsingEnabled)) {
-		QList<QNetworkCookie> noCookies;
-		return noCookies;
-	}
-
 	return QNetworkCookieJar::cookiesForUrl(url);
 }
 
@@ -241,10 +234,6 @@ bool CookieJar::setCookiesFromUrl(const QList<QNetworkCookie> &cookieList, const
 {
 	if (!m_loaded)
 		load();
-
-	QWebSettings *globalSettings = QWebSettings::globalSettings();
-	if (globalSettings->testAttribute(QWebSettings::PrivateBrowsingEnabled))
-		return false;
 
 	QString host = url.host();
 	bool eBlock = qBinaryFind(m_exceptions_block.begin(), m_exceptions_block.end(), host) != m_exceptions_block.end();
@@ -259,7 +248,7 @@ bool CookieJar::setCookiesFromUrl(const QList<QNetworkCookie> &cookieList, const
 		// pass url domain == cookie domain
 		QDateTime soon = QDateTime::currentDateTime();
 		soon = soon.addDays(90);
-		for (QNetworkCookie cookie : cookieList) {
+		foreach (QNetworkCookie cookie, cookieList) {
 			QList<QNetworkCookie> lst;
 			if (m_keepCookies == KeepUntilTimeLimit
 				&& !cookie.isSessionCookie()
@@ -277,10 +266,6 @@ bool CookieJar::setCookiesFromUrl(const QList<QNetworkCookie> &cookieList, const
 					setAllCookies(cookies);
 					addedCookies = true;
 				}
-#if 0
-				else
-					qWarning() << "setCookiesFromUrl failed" << url << cookieList.value(0).toRawForm();
-#endif
 			}
 		}
 	}
@@ -372,4 +357,232 @@ void CookieJar::setAllowForSessionCookies(const QStringList &list)
 	m_exceptions_allowForSession = list;
 	qSort(m_exceptions_allowForSession.begin(), m_exceptions_allowForSession.end());
 	m_saveTimer->changeOccurred();
+}
+
+CookieModel::CookieModel(CookieJar *cookieJar, QObject *parent)
+	: QAbstractTableModel(parent)
+	, m_cookieJar(cookieJar)
+{
+	connect(m_cookieJar, SIGNAL(cookiesChanged()), this, SLOT(cookiesChanged()));
+	m_cookieJar->load();
+}
+
+QVariant CookieModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+	if (role == Qt::SizeHintRole) {
+		QFont font;
+		font.setPointSize(10);
+		QFontMetrics fm(font);
+		int height = fm.height() + fm.height()/3;
+		int width = fm.width(headerData(section, orientation, Qt::DisplayRole).toString());
+		return QSize(width, height);
+	}
+
+	if (orientation == Qt::Horizontal) {
+		if (role != Qt::DisplayRole)
+			return QVariant();
+
+		switch (section) {
+			case 0:
+				return tr("Website");
+			case 1:
+				return tr("Name");
+			case 2:
+				return tr("Path");
+			case 3:
+				return tr("Secure");
+			case 4:
+				return tr("Expires");
+			case 5:
+				return tr("Contents");
+			default:
+				return QVariant();
+		}
+	}
+	return QAbstractTableModel::headerData(section, orientation, role);
+}
+
+QVariant CookieModel::data(const QModelIndex &index, int role) const
+{
+	QList<QNetworkCookie> lst;
+	if (m_cookieJar)
+		lst = m_cookieJar->allCookies();
+	if (index.row() < 0 || index.row() >= lst.size())
+		return QVariant();
+
+	switch (role) {
+	case Qt::DisplayRole:
+	case Qt::EditRole: {
+		QNetworkCookie cookie = lst.at(index.row());
+		switch (index.column()) {
+			case 0:
+				return cookie.domain();
+			case 1:
+				return cookie.name();
+			case 2:
+				return cookie.path();
+			case 3:
+				return cookie.isSecure();
+			case 4:
+				return cookie.expirationDate();
+			case 5:
+				return cookie.value();
+		}
+		}
+	case Qt::FontRole:{
+		QFont font;
+		font.setPointSize(10);
+		return font;
+		}
+	}
+
+	return QVariant();
+}
+
+int CookieModel::columnCount(const QModelIndex &parent) const
+{
+	return (parent.isValid()) ? 0 : 6;
+}
+
+int CookieModel::rowCount(const QModelIndex &parent) const
+{
+	return (parent.isValid() || !m_cookieJar) ? 0 : m_cookieJar->allCookies().count();
+}
+
+bool CookieModel::removeRows(int row, int count, const QModelIndex &parent)
+{
+	if (parent.isValid() || !m_cookieJar)
+		return false;
+	int lastRow = row + count - 1;
+	beginRemoveRows(parent, row, lastRow);
+	QList<QNetworkCookie> lst = m_cookieJar->allCookies();
+	for (int i = lastRow; i >= row; --i) {
+		lst.removeAt(i);
+	}
+	m_cookieJar->setAllCookies(lst);
+	endRemoveRows();
+	return true;
+}
+
+void CookieModel::cookiesChanged()
+{
+	beginResetModel();
+	endResetModel();
+}
+
+CookieExceptionsModel::CookieExceptionsModel(CookieJar *cookiejar, QObject *parent)
+	: QAbstractTableModel(parent)
+	, m_cookieJar(cookiejar)
+{
+	m_allowedCookies = m_cookieJar->allowedCookies();
+	m_blockedCookies = m_cookieJar->blockedCookies();
+	m_sessionCookies = m_cookieJar->allowForSessionCookies();
+}
+
+QVariant CookieExceptionsModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+	if (role == Qt::SizeHintRole) {
+		QFont font;
+		font.setPointSize(10);
+		QFontMetrics fm(font);
+		int height = fm.height() + fm.height()/3;
+		int width = fm.width(headerData(section, orientation, Qt::DisplayRole).toString());
+		return QSize(width, height);
+	}
+
+	if (orientation == Qt::Horizontal
+		&& role == Qt::DisplayRole) {
+		switch (section) {
+			case 0:
+				return tr("Website");
+			case 1:
+				return tr("Status");
+		}
+	}
+	return QAbstractTableModel::headerData(section, orientation, role);
+}
+
+QVariant CookieExceptionsModel::data(const QModelIndex &index, int role) const
+{
+	if (index.row() < 0 || index.row() >= rowCount())
+		return QVariant();
+
+	switch (role) {
+	case Qt::DisplayRole:
+	case Qt::EditRole: {
+		int row = index.row();
+		if (row < m_allowedCookies.count()) {
+			switch (index.column()) {
+				case 0:
+					return m_allowedCookies.at(row);
+				case 1:
+					return tr("Allow");
+			}
+		}
+		row = row - m_allowedCookies.count();
+		if (row < m_blockedCookies.count()) {
+			switch (index.column()) {
+				case 0:
+					return m_blockedCookies.at(row);
+				case 1:
+					return tr("Block");
+			}
+		}
+		row = row - m_blockedCookies.count();
+		if (row < m_sessionCookies.count()) {
+			switch (index.column()) {
+				case 0:
+					return m_sessionCookies.at(row);
+				case 1:
+					return tr("Allow For Session");
+			}
+		}
+		}
+	case Qt::FontRole:{
+		QFont font;
+		font.setPointSize(10);
+		return font;
+		}
+	}
+	return QVariant();
+}
+
+int CookieExceptionsModel::columnCount(const QModelIndex &parent) const
+{
+	return (parent.isValid()) ? 0 : 2;
+}
+
+int CookieExceptionsModel::rowCount(const QModelIndex &parent) const
+{
+	return (parent.isValid() || !m_cookieJar) ? 0 : m_allowedCookies.count() + m_blockedCookies.count() + m_sessionCookies.count();
+}
+
+bool CookieExceptionsModel::removeRows(int row, int count, const QModelIndex &parent)
+{
+	if (parent.isValid() || !m_cookieJar)
+		return false;
+
+	int lastRow = row + count - 1;
+	beginRemoveRows(parent, row, lastRow);
+	for (int i = lastRow; i >= row; --i) {
+		if (i < m_allowedCookies.count()) {
+			m_allowedCookies.removeAt(row);
+			continue;
+		}
+		i = i - m_allowedCookies.count();
+		if (i < m_blockedCookies.count()) {
+			m_blockedCookies.removeAt(row);
+			continue;
+		}
+		i = i - m_blockedCookies.count();
+		if (i < m_sessionCookies.count()) {
+			m_sessionCookies.removeAt(row);
+			continue;
+		}
+	}
+	m_cookieJar->setAllowedCookies(m_allowedCookies);
+	m_cookieJar->setBlockedCookies(m_blockedCookies);
+	m_cookieJar->setAllowForSessionCookies(m_sessionCookies);
+	endRemoveRows();
+	return true;
 }

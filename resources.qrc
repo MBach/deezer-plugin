@@ -5,5 +5,6 @@
         <file alias="logo">deezer-logo.png</file>
         <file alias="deezer-icon">deezer-icon.png</file>
         <file alias="deezer-icon2">deezer-icon2.png</file>
+        <file>dz.js</file>
     </qresource>
 </RCC>

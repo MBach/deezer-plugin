@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2013 Digia Plc and/or its subsidiary(-ies).
-** Contact: http://www.qt-project.org/legal
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the demonstration applications of the Qt Toolkit.
 **
@@ -10,27 +10,27 @@
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and Digia.  For licensing terms and
-** conditions see http://qt.digia.com/licensing.  For further information
-** use the contact form at http://qt.digia.com/contact-us.
+** a written agreement between you and The Qt Company. For licensing terms
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 2.1 as published by the Free Software
 ** Foundation and appearing in the file LICENSE.LGPL included in the
-** packaging of this file.  Please review the following information to
+** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 2.1 requirements
 ** will be met: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** In addition, as a special exception, Digia gives you certain additional
-** rights.  These rights are described in the Digia Qt LGPL Exception
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
 ** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
 ** General Public License version 3.0 as published by the Free Software
 ** Foundation and appearing in the file LICENSE.GPL included in the
-** packaging of this file.  Please review the following information to
+** packaging of this file. Please review the following information to
 ** ensure the GNU General Public License version 3.0 requirements will be
 ** met: http://www.gnu.org/copyleft/gpl.html.
 **
@@ -39,40 +39,31 @@
 **
 ****************************************************************************/
 
-#include "cookiejar.h"
-#include "networkaccessmanager.h"
 #include "webview.h"
-#include "settings.h"
 
-#include <QtGui/QClipboard>
-#include <QtWidgets/QMenu>
-#include <QtWidgets/QMessageBox>
-#include <QtGui/QMouseEvent>
-
-#include <QWebHitTestResult>
+#include <QMessageBox>
+#include <QWebEngineProfile>
 
 #include <QtCore/QDebug>
 #include <QtCore/QBuffer>
 
-#include <QNetworkReply>
-#include <QWebElement>
-#include <QWebSecurityOrigin>
-
-WebPage::WebPage(QObject *parent)
-	: QWebPage(parent)
-	, m_keyboardModifiers(Qt::NoModifier)
-	, m_pressedButtons(Qt::NoButton)
-	, m_openInNewTab(false)
+/*WebPage::WebPage(QWebEngineProfile *profile, QObject *parent)
+	: QWebEnginePage(profile, parent)
 	, _hasToken(false)
-{
-	setNetworkAccessManager(NetworkAccessManager::getInstance());
-	connect(this, SIGNAL(unsupportedContent(QNetworkReply*)), this, SLOT(handleUnsupportedContent(QNetworkReply*)));
-}
+{}
 
-bool WebPage::acceptNavigationRequest(QWebFrame *, const QNetworkRequest &request, NavigationType)
+bool WebPage::acceptNavigationRequest(const QUrl &url, NavigationType type, bool isMainFrame)
 {
-	if (request.url().toString().contains("access_token=")) {
-		QString r = request.url().toString();
+	Q_UNUSED(type);
+	if (isMainFrame) {
+		m_loadingUrl = url;
+		emit loadingUrl(m_loadingUrl);
+	}
+	qDebug() << Q_FUNC_INFO << url.toString();
+	if (url.toString().contains("access_token=")) {
+		qDebug() << Q_FUNC_INFO << "access_token found";
+
+		QString r = url.toString();
 		int i = r.indexOf("access_token=");
 		int j = r.mid(i + 13).indexOf('&');
 		QString t = r.mid(i + 13, j);
@@ -80,117 +71,88 @@ bool WebPage::acceptNavigationRequest(QWebFrame *, const QNetworkRequest &reques
 			_hasToken = true;
 			WebView *view = qobject_cast<WebView*>(this->view());
 			if (view) {
+				qDebug() << Q_FUNC_INFO << "token found" << t;
 				view->setToken(t);
+			} else {
+				qDebug() << Q_FUNC_INFO << "cannot cast view";
 			}
 		}
 	}
 	return true;
 }
 
-QWebPage *WebPage::createWindow(QWebPage::WebWindowType)
+bool WebPage::certificateError(const QWebEngineCertificateError &error)
 {
-	return new WebPage(this->parent());
+	qDebug() << Q_FUNC_INFO;
+	if (error.isOverridable()) {
+		QMessageBox msgBox;
+		msgBox.setIcon(QMessageBox::Warning);
+		msgBox.setText(error.errorDescription());
+		msgBox.setInformativeText(tr("If you wish so, you may continue with an unverified certificate. "
+									 "Accepting an unverified certificate means "
+									 "you may not be connected with the host you tried to connect to.\n"
+									 "Do you wish to override the security check and continue?"));
+		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msgBox.setDefaultButton(QMessageBox::No);
+		return msgBox.exec() == QMessageBox::Yes;
+	}
+	QMessageBox::critical(view(), tr("Certificate Error"), error.errorDescription(), QMessageBox::Ok, QMessageBox::NoButton);
+	return false;
 }
 
-void WebPage::handleUnsupportedContent(QNetworkReply *reply)
+QWebEnginePage * WebPage::createWindow(WebWindowType)
 {
-	QString errorString = reply->errorString();
+	qDebug() << Q_FUNC_INFO;
+	return new WebPage(this->profile(), this->parent());
+}*/
 
-	if (m_loadingUrl != reply->url()) {
-		// sub resource of this page
-		qWarning() << "Resource" << reply->url().toEncoded() << "has unknown Content-Type, will be ignored.";
-		reply->deleteLater();
-		return;
+#include "deezerplugin.h"
+
+WebView::WebView(DeezerPlugin *deezer, QWidget* parent)
+	: QWebEngineView(parent), _deezer(deezer)
+	//, m_page(new WebPage(QWebEngineProfile::defaultProfile(), this->parent()))
+{
+	connect(this, &QWebEngineView::loadFinished, this, &WebView::loadFinished);
+}
+
+/*void WebView::setPage(WebPage *_page)
+{
+	qDebug() << Q_FUNC_INFO << _page;
+	if (m_page) {
+		m_page->deleteLater();
 	}
+	m_page = _page;
+	QWebEngineView::setPage(_page);
+	connect(m_page, &WebPage::loadingUrl, this, &WebView::urlChanged);
+}*/
 
-	if (reply->error() == QNetworkReply::NoError && !reply->header(QNetworkRequest::ContentTypeHeader).isValid()) {
-		errorString = "Unknown Content-Type";
-	}
-
-	QFile file(QLatin1String(":/notfound.html"));
-	bool isOpened = file.open(QIODevice::ReadOnly);
-	Q_ASSERT(isOpened);
-	Q_UNUSED(isOpened)
-
-	QString title = tr("Error loading page: %1").arg(reply->url().toString());
-	QString html = QString(QLatin1String(file.readAll()))
-						.arg(title)
-						.arg(errorString)
-						.arg(reply->url().toString());
-
-	QBuffer imageBuffer;
-	imageBuffer.open(QBuffer::ReadWrite);
-	QIcon icon = view()->style()->standardIcon(QStyle::SP_MessageBoxWarning, 0, view());
-	QPixmap pixmap = icon.pixmap(QSize(32,32));
-	if (pixmap.save(&imageBuffer, "PNG")) {
-		html.replace(QLatin1String("IMAGE_BINARY_DATA_HERE"),
-					 QString(QLatin1String(imageBuffer.buffer().toBase64())));
-	}
-
-	QList<QWebFrame*> frames;
-	frames.append(mainFrame());
-	while (!frames.isEmpty()) {
-		QWebFrame *frame = frames.takeFirst();
-		if (frame->url() == reply->url()) {
-			frame->setHtml(html, reply->url());
-			return;
+void WebView::loadFinished(bool success)
+{
+	qDebug() << Q_FUNC_INFO << success;
+	if (success) {
+		qDebug() << url();
+		if (url().toString().contains("access_token=")) {
+			qDebug() << Q_FUNC_INFO << "access_token found";
+			QString r = url().toString();
+			QString access = "access_token=";
+			int i = r.indexOf(access);
+			int j = r.mid(i + access.count()).indexOf('&');
+			QString t = r.mid(i + access.count(), j);
+			qDebug() << Q_FUNC_INFO << "token found" << t;
+			_deezer->sync(t);
+			this->hide();
 		}
-		for (QWebFrame *frame : frame->childFrames())
-			frames.append(frame);
 	}
-	if (m_loadingUrl == reply->url()) {
-		mainFrame()->setHtml(html, reply->url());
-	}
-}
 
-WebView::WebView(QWidget* parent)
-	: QWebView(parent)
-	, m_progress(0)
-	, m_page(new WebPage(this))
-{
-	m_page->setNetworkAccessManager(NetworkAccessManager::getInstance());
-	if (m_page->mainFrame()) {
-		/// XXX: crash sometimes in Release mode, always in Debug ???
-		//m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "https://www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
-		//m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("http://", "http://www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
-		//m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("https://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
-		//m_page->mainFrame()->securityOrigin().addAccessWhitelistEntry("http://", "www.deezer.com", QWebSecurityOrigin::AllowSubdomains);
-	}
-	setPage(m_page);
-	m_page->setView(this);
-	// connect(m_page, &WebPage::tokenFound, this, &WebView::aboutToSyncWithToken);
-	connect(page(), SIGNAL(statusBarMessage(QString)), SLOT(setStatusBarText(QString)));
-	connect(this, SIGNAL(loadProgress(int)), this, SLOT(setProgress(int)));
-	connect(this, SIGNAL(loadFinished(bool)), this, SLOT(loadFinished()));
-	page()->setForwardUnsupportedContent(true);
-}
-
-void WebView::setProgress(int progress)
-{
-	m_progress = progress;
-}
-
-void WebView::loadFinished()
-{
-	if (100 != m_progress) {
-		qWarning() << "Received finished signal while progress is still:" << progress()
-				   << "Url:" << url();
-	}
-	m_progress = 0;
 }
 
 void WebView::loadUrl(const QUrl &url)
 {
-	m_initialUrl = url;
+	qDebug() << Q_FUNC_INFO << url.toString();
 	load(url);
 }
 
-QString WebView::lastStatusBarText() const
-{
-	return m_statusBarText;
-}
-
-QString WebView::token() const
+/*QString WebView::token() const
 {
 	return _token;
 }
@@ -198,54 +160,5 @@ QString WebView::token() const
 void WebView::setToken(const QString &token)
 {
 	_token = token;
-	emit aboutToSyncWithToken(_token);
-}
-
-QUrl WebView::url() const
-{
-	QUrl url = QWebView::url();
-	if (!url.isEmpty()) {
-		qDebug() << "url not empty";
-		return url;
-	}
-	qDebug() << "initial url";
-	return m_initialUrl;
-}
-
-void WebView::setStatusBarText(const QString &string)
-{
-	m_statusBarText = string;
-}
-
-QWebView* WebView::createWindow(QWebPage::WebWindowType)
-{
-	WebView *w = new WebView;
-	w->page()->setNetworkAccessManager(NetworkAccessManager::getInstance());
-	w->page()->setView(w);
-
-	// Autoclose the popup
-	connect(w->page(), &QWebPage::windowCloseRequested, this, [=]() {
-		qDebug() << "autoclose";
-		w->close();
-	});
-	if (w->page() && w->page()->currentFrame()) {
-		qDebug() << "here";
-	}
-	connect(w, &QWebView::loadFinished, this, [=](bool ok) {
-		qDebug() << "ok" << ok;
-		if (!ok) {
-			return;
-		}
-		Settings *s = Settings::instance();
-		QByteArray lba = s->value("DeezerPlugin/l").toByteArray();
-		QByteArray pba = s->value("DeezerPlugin/p").toByteArray();
-
-		QWebElement we = w->page()->currentFrame()->documentElement();
-		QWebElement login = we.findFirst("#login_mail");
-		login.setAttribute("value", QByteArray::fromBase64(lba));
-		QWebElement password = we.findFirst("#login_password");
-		password.setAttribute("value", QByteArray::fromBase64(pba));
-		qDebug() << login.toPlainText();
-	});
-	return w;
-}
+	emit aboutToSyncWithToken(token);
+}*/

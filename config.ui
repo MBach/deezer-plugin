@@ -74,6 +74,13 @@
          </spacer>
         </item>
         <item>
+         <widget class="QPushButton" name="testFlashPopup">
+          <property name="text">
+           <string>Test flash</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="openConnectPopup">
           <property name="text">
            <string>Open connection popup</string>

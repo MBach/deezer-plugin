@@ -58,11 +58,9 @@
 
 #include <QThread>
 
-NetworkAccessManager* NetworkAccessManager::networkAccessManager = nullptr;
-
 NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	: QNetworkAccessManager(parent),
-	_requestCount(0), _timer(new QTimer(this)), _isSync(false)
+	_timer(new QTimer(this)), _isSync(false), _requestCount(0)
 {
 	connect(this, &QNetworkAccessManager::sslErrors, this, &NetworkAccessManager::ignoreSslErrors);
 	connect(this, &QNetworkAccessManager::finished, this, [=]() {
@@ -87,14 +85,6 @@ NetworkAccessManager::NetworkAccessManager(QObject *parent)
 	QString location = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 	diskCache->setCacheDirectory(location);
 	setCache(diskCache);
-}
-
-NetworkAccessManager* NetworkAccessManager::getInstance()
-{
-	if (networkAccessManager == nullptr) {
-		networkAccessManager = new NetworkAccessManager;
-	}
-	return networkAccessManager;
 }
 
 QNetworkReply* NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & req, QIODevice * outgoingData)

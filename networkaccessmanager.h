@@ -42,11 +42,10 @@
 #ifndef NETWORKACCESSMANAGER_H
 #define NETWORKACCESSMANAGER_H
 
-#include <QtNetwork/QNetworkAccessManager>
-#include <QtNetwork/QNetworkRequest>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
 
 #include <QTimer>
-
 
 class NetworkAccessManager : public QNetworkAccessManager
 {
@@ -59,9 +58,6 @@ private:
 public:
 	NetworkAccessManager(QObject *parent = 0);
 
-	/** Singleton Pattern to easily use Settings everywhere in the app. */
-	static NetworkAccessManager* getInstance();
-
 	virtual QNetworkReply* createRequest (Operation op, const QNetworkRequest &req, QIODevice *outgoingData = 0);
 
 	inline void setSync(bool sync) { _isSync = sync; }
@@ -69,9 +65,6 @@ public:
 private:
 	QList<QString> sslTrustedHostList;
 	qint64 _requestCount;
-
-	/** The unique instance of this class. */
-	static NetworkAccessManager *networkAccessManager;
 
 public slots:
 	void loadSettings();

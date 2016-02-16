@@ -1,23 +1,24 @@
 #ifndef SELECTEDTRACKSMODEL_H
 #define SELECTEDTRACKSMODEL_H
 
-#include <QStringList>
+#include <QUrl>
 
 #include "miamcore_global.h"
 #include "model/trackdao.h"
 
-class SqlDatabase;
-
+/**
+ * \brief		The SelectedTracksModel class
+ * \author		Matthieu Bachelier
+ * \copyright   GNU General Public License v3
+ */
 class MIAMCORE_LIBRARY SelectedTracksModel
 {
 public:
 	virtual ~SelectedTracksModel();
 
-	virtual QStringList selectedTracks() = 0;
+	virtual QList<QUrl> selectedTracks() = 0;
 
 	virtual void updateSelectedTracks() = 0;
-
-	virtual void init() = 0;
 };
 
 #endif // SELECTEDTRACKSMODEL_H

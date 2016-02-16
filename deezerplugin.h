@@ -11,19 +11,17 @@
 #include <QNetworkReply>
 #include <QXmlStreamReader>
 #include "ui_config.h"
-#include "deezerdatabase.h"
 #include "deezerwebplayer.h"
 #include "model/sqldatabase.h"
-
-class QWebView;
+#include "networkaccessmanager.h"
 
 /**
  * \brief       Deezer plugin
  * \author      Matthieu Bachelier
- * \version     0.5
+ * \version     0.7
  * \copyright   GNU General Public License v3
  */
-class DeezerPlugin : public QObject, public RemoteMediaPlayerPlugin
+class DeezerPlugin : public RemoteMediaPlayerPlugin
 {
 	Q_OBJECT
 	Q_PLUGIN_METADATA(IID RemoteMediaPlayerPlugin_iid)
@@ -37,11 +35,11 @@ public:
 private:
 	mutable QString _token;
 	Ui::DeezerPluginConfigPage _config;
-	AbstractSearchDialog* _searchDialog;
 	QList<WebView*> _pages;
 	QListView *_artists;
 	QListView *_albums;
 	QListView *_tracks;
+	AbstractSearchDialog* _searchDialog;
 	QCheckBox *_checkBox;
 	DeezerWebPlayer *_webPlayer;
 
@@ -50,9 +48,11 @@ private:
 	QList<QNetworkReply*> _pendingRequest;
 	QDir _cachePath;
 
+	NetworkAccessManager *_nam;
+
 public:
 	/** Default constructor. */
-	explicit DeezerPlugin();
+	explicit DeezerPlugin(QObject *parent = nullptr);
 
 	/** Default destructor. */
 	virtual ~DeezerPlugin();
@@ -63,16 +63,16 @@ public:
 	virtual QWidget* configPage() override;
 
 	/** This plugin can be configurable in options. */
-	inline virtual bool isConfigurable() const { return true; }
+	inline virtual bool isConfigurable() const override { return true; }
 
 	/** Name displayed in options. */
-	inline virtual QString name() const { return "Deezer-Plugin"; }
+	inline virtual QString name() const override { return "Deezer-Plugin"; }
 
 	/** Every RemoteMediaPlayerPlugin has to return an implementation of RemoteMediaPlayer class. */
-	inline virtual RemoteMediaPlayer * player() const { return _webPlayer;	}
+	inline virtual IMediaPlayer * player() const override { return _webPlayer;	}
 
 	/** Release displayed in options. */
-	inline virtual QString version() const { return "0.5"; }
+	inline virtual QString version() const override { return "0.7"; }
 
 	/** Redefined. */
 	virtual void setSearchDialog(AbstractSearchDialog *w) override;

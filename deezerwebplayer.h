@@ -5,11 +5,11 @@
 #include <QObject>
 #include <QUrl>
 #include "webview.h"
-#include "remotemediaplayer.h"
+#include "imediaplayer.h"
 
 class DeezerPlugin;
 
-class DeezerWebPlayer : public RemoteMediaPlayer
+class DeezerWebPlayer : public IMediaPlayer
 {
 	Q_OBJECT
 private:
@@ -28,10 +28,10 @@ public:
 	inline virtual QString host() const override { return "www.deezer.com"; }
 
 	/** Current media length in ms. */
-	virtual int length() const override;
+	virtual qint64 duration() const override;
 
 	/** The position in the current media being played. Percent-based. */
-	virtual float position() const override;
+	virtual qreal position() const override;
 
 	virtual void setMute(bool b) override;
 
@@ -43,17 +43,17 @@ public:
 	/** The time in ms in the current media being played (<= length()). */
 	inline qint64 time() const override { return _time; }
 
-	WebView * webView() const { return _webView; }
+	inline WebView * webView() const { return _webView; }
 
 	/** The current volume of this remote player. */
-	virtual int volume() const override;
+	virtual qreal volume() const override;
 
 public slots:
 	virtual void pause() override;
 	virtual void play(const QUrl &track) override;
 	virtual void resume() override;
 	virtual void seek(float pos) override;
-	virtual void setVolume(int volume) override;
+	virtual void setVolume(qreal volume) override;
 	virtual void stop() override;
 
 	void playerHasPaused();

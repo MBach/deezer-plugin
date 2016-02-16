@@ -1,7 +1,7 @@
 /****************************************************************************
 **
-** Copyright (C) 2013 Digia Plc and/or its subsidiary(-ies).
-** Contact: http://www.qt-project.org/legal
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the demonstration applications of the Qt Toolkit.
 **
@@ -10,27 +10,27 @@
 ** Licensees holding valid commercial Qt licenses may use this file in
 ** accordance with the commercial license agreement provided with the
 ** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and Digia.  For licensing terms and
-** conditions see http://qt.digia.com/licensing.  For further information
-** use the contact form at http://qt.digia.com/contact-us.
+** a written agreement between you and The Qt Company. For licensing terms
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
 **
 ** GNU Lesser General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU Lesser
 ** General Public License version 2.1 as published by the Free Software
 ** Foundation and appearing in the file LICENSE.LGPL included in the
-** packaging of this file.  Please review the following information to
+** packaging of this file. Please review the following information to
 ** ensure the GNU Lesser General Public License version 2.1 requirements
 ** will be met: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
 **
-** In addition, as a special exception, Digia gives you certain additional
-** rights.  These rights are described in the Digia Qt LGPL Exception
+** As a special exception, The Qt Company gives you certain additional
+** rights. These rights are described in The Qt Company LGPL Exception
 ** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
 **
 ** GNU General Public License Usage
 ** Alternatively, this file may be used under the terms of the GNU
 ** General Public License version 3.0 as published by the Free Software
 ** Foundation and appearing in the file LICENSE.GPL included in the
-** packaging of this file.  Please review the following information to
+** packaging of this file. Please review the following information to
 ** ensure the GNU General Public License version 3.0 requirements will be
 ** met: http://www.gnu.org/copyleft/gpl.html.
 **
@@ -126,5 +126,45 @@ private:
 	QStringList m_exceptions_allowForSession;
 };
 
-#endif // COOKIEJAR_H
+class CookieModel : public QAbstractTableModel
+{
+	Q_OBJECT
 
+public:
+	CookieModel(CookieJar *jar, QObject *parent = 0);
+	QVariant headerData(int section, Qt::Orientation orientation, int role) const;
+	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+	int columnCount(const QModelIndex &parent = QModelIndex()) const;
+	int rowCount(const QModelIndex &parent = QModelIndex()) const;
+	bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
+
+private slots:
+	void cookiesChanged();
+
+private:
+	CookieJar *m_cookieJar;
+};
+
+class CookieExceptionsModel : public QAbstractTableModel
+{
+	Q_OBJECT
+	friend class CookiesExceptionsDialog;
+
+public:
+	CookieExceptionsModel(CookieJar *cookieJar, QObject *parent = 0);
+	QVariant headerData(int section, Qt::Orientation orientation, int role) const;
+	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+	int columnCount(const QModelIndex &parent = QModelIndex()) const;
+	int rowCount(const QModelIndex &parent = QModelIndex()) const;
+	bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
+
+private:
+	CookieJar *m_cookieJar;
+
+	// Domains we allow, Domains we block, Domains we allow for this session
+	QStringList m_allowedCookies;
+	QStringList m_blockedCookies;
+	QStringList m_sessionCookies;
+};
+
+#endif // COOKIEJAR_H
