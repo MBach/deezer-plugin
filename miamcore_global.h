@@ -10,6 +10,14 @@
 # define MIAMCORE_LIBRARY Q_DECL_IMPORT
 #endif
 
+#if defined(Q_OS_OSX)
+int const extra = 0;
+int const lighterValue = 140;
+#else
+int const extra = 1;
+int const lighterValue = 160;
+#endif
+
 #include <QCoreApplication>
 #include <QMetaType>
 

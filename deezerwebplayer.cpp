@@ -8,14 +8,15 @@
 
 DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent)
 	: IMediaPlayer(parent)
-	, _webView(new WebView(parent))
+	//, _webView(new WebView(parent))
+	, _webView(nullptr)
 	, _deezerPlugin(parent)
 	, _stopButtonWasTriggered(false)
 	, _pos(0)
 	, _time(0)
 {
 	/// FIXME: how to play sound with invisible webView?
-	_webView->load(QUrl("http://www.miam-player.org/deezer-micro/index.html"));
+	/*_webView->load(QUrl("http://www.miam-player.org/deezer-micro/index.html"));
 	_webView->show();
 	Settings *settings = Settings::instance();
 
@@ -52,7 +53,7 @@ DeezerWebPlayer::DeezerWebPlayer(DeezerPlugin *parent)
 		if (_webView->isVisible()) {
 			_webView->hide();
 		}
-	});
+	});*/
 }
 
 /** Current media length in ms. */

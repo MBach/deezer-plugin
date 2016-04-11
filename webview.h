@@ -97,8 +97,8 @@ public:
 	//QString token() const;
 	//void setToken(const QString &token);
 
-signals:
-	void aboutToSyncWithToken(const QString &token);
+//signals:
+//	void aboutToSyncWithToken(const QString &token);
 
 private slots:
 	void loadFinished(bool success);

@@ -218,9 +218,9 @@ QString DeezerPlugin::extract(QXmlStreamReader &xml, const QString &criterion)
 {
 	while (xml.name() != criterion && !xml.hasError()) {
 		QXmlStreamReader::TokenType t = xml.readNext();
-		if (/*!isEager &&*/ t == QXmlStreamReader::EndElement) {
-			break;
-		}
+//		if (/*!isEager &&*/ t == QXmlStreamReader::EndElement) {
+//			break;
+//		}
 	}
 	return xml.readElementText();
 }
@@ -558,6 +558,7 @@ void DeezerPlugin::extractSynchronizedTracksFromPlaylists(const QString &playlis
 			if (xml.name() == "track") {
 				TrackDAO track;
 				track.setId(this->extract(xml, "id"));
+				this->extract(xml, "readable");
 				track.setTitle(this->extract(xml, "title"));
 				track.setUri(this->extract(xml, "link"));
 				track.setLength(this->extract(xml, "duration"));
