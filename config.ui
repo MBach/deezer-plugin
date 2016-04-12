@@ -74,9 +74,9 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="openConnectPopup">
+         <widget class="QPushButton" name="connectButton">
           <property name="text">
-           <string>Open connection popup</string>
+           <string>Connect</string>
           </property>
          </widget>
         </item>
@@ -103,53 +103,6 @@
          <bool>true</bool>
         </property>
        </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBoxFlashPlayer">
-     <property name="title">
-      <string>Flash Player</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_5">
-      <item>
-       <widget class="QLabel" name="labelFlashPlayer">
-        <property name="text">
-         <string>Miam Player needs to have Flash Player for Opera or Chromium (PPAPI) in order to stream music from Deezer.</string>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <spacer name="horizontalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="testFlashPopup">
-          <property name="text">
-           <string>Click here to check if you can read Flash</string>
-          </property>
-          <property name="icon">
-           <iconset resource="resources.qrc">
-            <normaloff>:/flash-logo</normaloff>:/flash-logo</iconset>
-          </property>
-         </widget>
-        </item>
-       </layout>
       </item>
      </layout>
     </widget>

@@ -1,7 +1,5 @@
 #include "deezerplugin.h"
 #include "settings.h"
-#include "webview.h"
-//#include "cookiejar.h"
 #include "abstractsearchdialog.h"
 #include "model/playlistdao.h"
 #include "model/sqldatabase.h"
@@ -14,7 +12,6 @@
 #include <QSqlQuery>
 #include <QSqlRecord>
 #include <QStandardPaths>
-#include <QWebEngineSettings>
 
 #include <QtDebug>
 
@@ -26,12 +23,9 @@ DeezerPlugin::DeezerPlugin(QObject *parent)
 	, _tracks(nullptr)
 	, _searchDialog(nullptr)
 	, _checkBox(nullptr)
-	, _webPlayer(new DeezerWebPlayer(this))
+	, _webPlayer(new DeezezPlayer(this))
 	, _nam(new NetworkAccessManager(this))
 {
-	//NetworkAccessManager *nam = NetworkAccessManager::getInstance();
-	//nam->setCookieJar(new CookieJar);
-
 	// Dispatch replies: search for something, get artist info, get tracks from album, get track info, fetch, synchronize...
 	connect(_nam, &QNetworkAccessManager::finished, this, &DeezerPlugin::dispatchReply);
 	//connect(_nam, &NetworkAccessManager::syncHasFinished, SqlDatabase::instance(), &SqlDatabase::load);
@@ -40,14 +34,6 @@ DeezerPlugin::DeezerPlugin(QObject *parent)
 		 db.open();
 	});
 	//connect(_webPlayer->webView(), &WebView::aboutToSyncWithToken, this, &DeezerPlugin::sync);
-
-	QWebEngineSettings *s = QWebEngineSettings::globalSettings();
-	s->setAttribute(QWebEngineSettings::PluginsEnabled, true);
-	s->setAttribute(QWebEngineSettings::JavascriptEnabled, true);
-	s->setAttribute(QWebEngineSettings::JavascriptCanOpenWindows, true);
-	s->setAttribute(QWebEngineSettings::LocalStorageEnabled, true);
-	s->setAttribute(QWebEngineSettings::LocalContentCanAccessRemoteUrls, true);
-	s->setAttribute(QWebEngineSettings::LocalContentCanAccessFileUrls, true);
 
 	Settings *settings = Settings::instance();
 	if (settings->value("DeezerPlugin/syncOptions").isNull()) {
@@ -76,11 +62,6 @@ DeezerPlugin::DeezerPlugin(QObject *parent)
 DeezerPlugin::~DeezerPlugin()
 {
 	qDebug() << Q_FUNC_INFO;
-	/*for (QWebView *view : _pages) {
-		delete view;
-		view = nullptr;
-	}*/
-	_pages.clear();
 	if (_checkBox) {
 		delete _checkBox;
 	}
@@ -120,13 +101,7 @@ QWidget* DeezerPlugin::configPage()
 
 	// Connect elements from UI
 	connect(_config.saveCredentialsCheckBox, &QCheckBox::toggled, this, &DeezerPlugin::saveCredentials);
-	connect(_config.openConnectPopup, &QPushButton::clicked, this, &DeezerPlugin::login);
-	connect(_config.testFlashPopup, &QPushButton::clicked, this, [=]() {
-		qDebug() << Q_FUNC_INFO;
-		WebView *webView = new WebView(this);
-		webView->loadUrl(QUrl("http://www.adobe.com/fr/software/flash/about/"));
-		webView->show();
-	});
+	connect(_config.connectButton, &QPushButton::clicked, this, &DeezerPlugin::login);
 	connect(_config.syncArtistsEPCheckbox, &QCheckBox::toggled, this, [=](bool b) {
 		QStringList l = settings->value("DeezerPlugin/syncOptions").toStringList();
 		if (b) {
@@ -750,11 +725,11 @@ void DeezerPlugin::dispatchReply(QNetworkReply *reply)
 void DeezerPlugin::login()
 {
 	qDebug() << Q_FUNC_INFO;
-	WebView *webView = new WebView(this);
+	/*WebView *webView = new WebView(this);
 	webView->installEventFilter(this);
 	webView->loadUrl(QUrl("https://connect.deezer.com/oauth/auth.php?app_id=141475&redirect_uri=http://www.miam-player.org/deezer-micro/channel.html&response_type=token&scope=manage_library,basic_access"));
 	webView->show();
-	_pages.append(webView);
+	_pages.append(webView);*/
 }
 
 /** Save credentials in the registry. */

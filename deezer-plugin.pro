@@ -1,22 +1,26 @@
-QT      += multimedia sql webenginecore webenginewidgets widgets
+QT      += multimedia sql widgets
 
 TARGET   = $$qtLibraryTarget(deezer-plugin)
 TEMPLATE = lib
 
+INCLUDEPATH += $$PWD
+INCLUDEPATH += $$sdk
+DEPENDPATH += $$sdk
+
 DEFINES += MIAM_PLUGIN
 
-CONFIG  += c++11
+CONFIG  += dll c++11
 
 win32 {
     MiamPlayerBuildDirectory = C:\dev\Miam-Player-build\src\Player
     CONFIG(debug, debug|release) {
 	target.path = $$MiamPlayerBuildDirectory\debug\plugins
-	LIBS += -Ldebug -lCore
+	LIBS += -Ldebug -lCore -L$$PWD/lib/ -llibdeezer.x64.dll
     }
 
     CONFIG(release, debug|release) {
 	target.path = $$MiamPlayerBuildDirectory\release\plugins
-	LIBS += -Lrelease -lCore
+	LIBS += -Lrelease -lCore -L$$PWD/lib/ -llibdeezer.x64.dll
     }
 }
 
@@ -40,18 +44,16 @@ HEADERS += interfaces/basicplugin.h \
     model/yeardao.h \
     abstractsearchdialog.h \
     deezerplugin.h \
-    deezerwebplayer.h \
     filehelper.h \
     imediaplayer.h \
     miamcore_global.h \
     networkaccessmanager.h \
     settings.h \
-    webview.h
+    deezerplayer.h
 
 SOURCES += deezerplugin.cpp \
-    deezerwebplayer.cpp \
     networkaccessmanager.cpp \
-    webview.cpp
+    deezerplayer.cpp
 
 RESOURCES += resources.qrc
 

@@ -11,7 +11,7 @@
 #include <QNetworkReply>
 #include <QXmlStreamReader>
 #include "ui_config.h"
-#include "deezerwebplayer.h"
+#include "deezerplayer.h"
 #include "model/sqldatabase.h"
 #include "networkaccessmanager.h"
 
@@ -35,13 +35,12 @@ public:
 private:
 	mutable QString _token;
 	Ui::DeezerPluginConfigPage _config;
-	QList<WebView*> _pages;
 	QListView *_artists;
 	QListView *_albums;
 	QListView *_tracks;
 	AbstractSearchDialog* _searchDialog;
 	QCheckBox *_checkBox;
-	DeezerWebPlayer *_webPlayer;
+	DeezezPlayer *_webPlayer;
 
 	QMap<QString, GenericDAO*> _cache;
 	QMap<QNetworkReply*, Reply> _repliesWhichInteractWithUi;
