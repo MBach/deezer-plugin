@@ -16,6 +16,10 @@
 
 #include "deezer-object.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @defgroup DeezerCApiMediaTrack Deezer MediaTrack C API
  * @ingroup DeezerCApi
@@ -184,5 +188,9 @@ const dz_media_track_detailed_infos_t*  dz_track_metadata_get_format_header(dz_t
 dz_mseconds_t dz_track_metadata_get_duration(dz_track_metadata_handle self);
 
 /** @} */ //End of group tag (for documentation purpose)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

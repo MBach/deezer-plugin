@@ -42,8 +42,8 @@ typedef enum {
  */
 typedef enum {
     DZ_CONNECT_EVENT_UNKNOWN,                           /**< Connect event has not been set yet, not a valid value. */
-	DZ_CONNECT_EVENT_USER_OFFLINE_AVAILABLE,            /**< User logged in, and credentials from offline store are loaded. */
-	
+    DZ_CONNECT_EVENT_USER_OFFLINE_AVAILABLE,            /**< User logged in, and credentials from offline store are loaded. */
+    
     DZ_CONNECT_EVENT_USER_ACCESS_TOKEN_OK,              /**< (Not available) dz_connect_login_with_email() ok, and access_token is available */
     DZ_CONNECT_EVENT_USER_ACCESS_TOKEN_FAILED,          /**< (Not available) dz_connect_login_with_email() failed */
 
@@ -171,27 +171,27 @@ typedef void (*dz_connect_on_cache_event_cb)(
     void*                         delegate
     );
 
-	
+    
 /**
  * @brief Configuration for a Deezer connect handle.
  */
 struct dz_connect_configuration {
-	/** The Deezer application ID being used. */
-	const char* app_id;
-	
-	/** Product ID of the application being used.\n
-	 *  In a compact form, only ascii characters and '.' (point character) are allowed.
-	 */
-	const char* product_id;
+    /** The Deezer application ID being used. */
+    const char* app_id;
+    
+    /** Product ID of the application being used.\n
+     *  In a compact form, only ascii characters and '.' (point character) are allowed.
+     */
+    const char* product_id;
 
     /** Build product ID which will be used by the Native SDK. */
-	const char* product_build_id;
-	
-	/** User profile path of application being used. */
-	const char* user_profile_path;
-	
-	/** (Optional) #connect_event_cb() connect event callback of application being used. */
-	dz_connect_onevent_cb connect_event_cb;
+    const char* product_build_id;
+    
+    /** User profile path of application being used. */
+    const char* user_profile_path;
+    
+    /** (Optional) #connect_event_cb() connect event callback of application being used. */
+    dz_connect_onevent_cb connect_event_cb;
     
     /** (Optional) Use to allow discovery. */
     const char* anonymous_blob;
@@ -226,7 +226,7 @@ LIBDEEZER_API dz_error_t dz_connect_debug_log_disable(dz_connect_handle self);
  * @returns    A string to a device_id.
  */
 LIBDEEZER_API const char* dz_connect_get_device_id(dz_connect_handle self);
-	
+    
 /**
  * @brief Activate the connect session.
  *

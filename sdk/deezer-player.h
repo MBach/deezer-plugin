@@ -18,6 +18,10 @@
 #include "deezer-connect.h"
 #include "deezer-object.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef unsigned int dz_index_in_playlist;
 
 /**
@@ -59,9 +63,9 @@ typedef enum {
     DZ_PLAYER_EVENT_PLAYLIST_SKIP_NO_RIGHT,              /**< You're on a radio, and you had no right to do skip. */
     
     DZ_PLAYER_EVENT_PLAYLIST_TRACK_SELECTED,             /**< A track is selected among the ones available on the server, and will be fetched and read. */
-	
+    
     DZ_PLAYER_EVENT_PLAYLIST_NEED_NATURAL_NEXT,          /**< We need a new natural_next action. */
-	
+    
     // Data loading related event.
     DZ_PLAYER_EVENT_MEDIASTREAM_DATA_READY,              /**< Data is ready to be introduced into audio output (first data after a play). */
     DZ_PLAYER_EVENT_MEDIASTREAM_DATA_READY_AFTER_SEEK,   /**< Data is ready to be introduced into audio output (first data after a seek). */
@@ -102,8 +106,8 @@ LIBDEEZER_API dz_player_event_t dz_player_event_get_type(dz_player_event_handle 
  * @return true if the context has been returned, false otherwise.
  */
 LIBDEEZER_API bool dz_player_event_get_playlist_context(dz_player_event_handle self,
-														dz_streaming_mode_t *out_streaming_mode,
-														dz_index_in_playlist *out_idx);
+                                                        dz_streaming_mode_t *out_streaming_mode,
+                                                        dz_index_in_playlist *out_idx);
 
 /**
  * @brief Get the Deezer API information for the player event instance.
@@ -180,22 +184,22 @@ typedef enum {
     
     /** (Not available) */
     DZ_TRACKLIST_AUTOPLAY_MODE_ONE,
-	/** (Not available) */
-	DZ_TRACKLIST_AUTOPLAY_MODE_ONE_REPEAT,
-	
-	/** Used to play radios. Using this flag indicates the player to
+    /** (Not available) */
+    DZ_TRACKLIST_AUTOPLAY_MODE_ONE_REPEAT,
+    
+    /** Used to play radios. Using this flag indicates the player to
      *  automatically play the next track in the tracklist.\n
      *  Radios are infinite playlists, tracks are added as soon
      *  as we get close to the end of the current tracklist.
      */
-	DZ_TRACKLIST_AUTOPLAY_MODE_NEXT,
-	/** (Not available) */
-	DZ_TRACKLIST_AUTOPLAY_MODE_NEXT_REPEAT,
-	
-	/** (Not available) */
-	DZ_TRACKLIST_AUTOPLAY_MODE_RANDOM,
-	/** (Not available) */
-	DZ_TRACKLIST_AUTOPLAY_MODE_RANDOM_REPEAT,
+    DZ_TRACKLIST_AUTOPLAY_MODE_NEXT,
+    /** (Not available) */
+    DZ_TRACKLIST_AUTOPLAY_MODE_NEXT_REPEAT,
+    
+    /** (Not available) */
+    DZ_TRACKLIST_AUTOPLAY_MODE_RANDOM,
+    /** (Not available) */
+    DZ_TRACKLIST_AUTOPLAY_MODE_RANDOM_REPEAT,
 
 } dz_tracklist_autoplay_mode_t;
 
@@ -346,8 +350,8 @@ LIBDEEZER_API dz_error_t dz_player_activate(dz_player_handle self, void*supervis
  * @param operation_userdata A reference to the user’s data.
  */
 LIBDEEZER_API dz_error_t dz_player_deactivate(dz_player_handle self,
-											  dz_activity_operation_callback cb,
-											  void* operation_userdata);
+                                              dz_activity_operation_callback cb,
+                                              void* operation_userdata);
 
 /**
  * @brief Set the track quality.
@@ -358,9 +362,9 @@ LIBDEEZER_API dz_error_t dz_player_deactivate(dz_player_handle self,
  * @param quality            Audio track quality.
  */
 LIBDEEZER_API dz_error_t dz_player_set_track_quality(dz_player_handle self,
-													 dz_activity_operation_callback cb,
-													 void* operation_userdata,
-													 dz_track_quality_t quality);
+                                                     dz_activity_operation_callback cb,
+                                                     void* operation_userdata,
+                                                     dz_track_quality_t quality);
 
 /**
  * @brief Get track quality.
@@ -387,9 +391,9 @@ LIBDEEZER_API dz_track_quality_t dz_player_get_track_quality(dz_player_handle se
  *          radio_id is like "radio-???", "artist-???", "user-???", "playlist-???"
  */
 LIBDEEZER_API dz_error_t dz_player_load(dz_player_handle self,
-										dz_activity_operation_callback cb,
-										void* operation_userdata,
-										const char *tracklist_data);
+                                        dz_activity_operation_callback cb,
+                                        void* operation_userdata,
+                                        const char *tracklist_data);
 
 /**
  * @brief Set the radio to play by type and id.
@@ -401,10 +405,10 @@ LIBDEEZER_API dz_error_t dz_player_load(dz_player_handle self,
  * @param radio_id           A string representing the integer id of the radio id.
  */
 LIBDEEZER_API dz_error_t dz_player_load_radio(dz_player_handle self,
-											  dz_activity_operation_callback cb,
-											  void* operation_userdata,
-											  const char *radio_type,
-											  const char *radio_id);
+                                              dz_activity_operation_callback cb,
+                                              void* operation_userdata,
+                                              const char *radio_type,
+                                              const char *radio_id);
 
 
 /**
@@ -419,9 +423,9 @@ LIBDEEZER_API dz_error_t dz_player_load_radio(dz_player_handle self,
  * @param track_url          A track url, like dzmedia:///track/[track_id]
  */
 LIBDEEZER_API dz_error_t dz_player_cache_next(dz_player_handle self,
-											  dz_activity_operation_callback cb,
-											  void* operation_userdata,
-											  const char *track_url);
+                                              dz_activity_operation_callback cb,
+                                              void* operation_userdata,
+                                              const char *track_url);
 
 /**
  * @brief Begin playing the already loaded tracklist.
@@ -538,9 +542,9 @@ typedef int dz_player_volume_percent_t;
  * @param volume             Volume to set in percent (0 to 100).
  */
 LIBDEEZER_API dz_error_t dz_player_set_output_volume(dz_player_handle self,
-													 dz_activity_operation_callback cb,
-													 void* operation_userdata,
-													 dz_player_volume_percent_t volume);
+                                                     dz_activity_operation_callback cb,
+                                                     void* operation_userdata,
+                                                     dz_player_volume_percent_t volume);
 
 
 /**
@@ -558,9 +562,9 @@ LIBDEEZER_API dz_error_t dz_player_set_output_volume(dz_player_handle self,
  * @param muted              Mute value.
  */
 LIBDEEZER_API dz_error_t dz_player_set_output_mute(dz_player_handle self,
-												   dz_activity_operation_callback cb,
-												   void* operation_userdata,
-												   bool muted);
+                                                   dz_activity_operation_callback cb,
+                                                   void* operation_userdata,
+                                                   bool muted);
 
 /**
  * @brief Setup things to be able to do cross fadings.
@@ -734,8 +738,8 @@ LIBDEEZER_API const char* dz_renderer_state_get_infos(dz_renderer_state_handle s
  * @param operation_userdata A reference to the user’s data.
  */
 LIBDEEZER_API dz_error_t dz_player_renderer_get_state(dz_player_handle self,
-													  dz_activity_operation_callback cb,
-													  void* operation_userdata);
+                                                      dz_activity_operation_callback cb,
+                                                      void* operation_userdata);
 
 /**
  * @brief Change/add/remove a renderer to the playback.
@@ -746,9 +750,9 @@ LIBDEEZER_API dz_error_t dz_player_renderer_get_state(dz_player_handle self,
  * @param json_list_of_renderer_id JSON list the renderer IDs like "[\"id1\",\"id2\"]".
  */
 LIBDEEZER_API dz_error_t dz_player_renderer_change_selection(dz_player_handle self,
-															 dz_activity_operation_callback cb,
-															 void* operation_userdata,
-															 const char *json_list_of_renderer_id);
+                                                             dz_activity_operation_callback cb,
+                                                             void* operation_userdata,
+                                                             const char *json_list_of_renderer_id);
 
 /**
  * @brief Change/add/remove a renderer to the playback.
@@ -760,11 +764,15 @@ LIBDEEZER_API dz_error_t dz_player_renderer_change_selection(dz_player_handle se
  * @param volume             The volume to be applied to the renderer.
  */
 LIBDEEZER_API dz_error_t dz_player_renderer_set_volume(dz_player_handle self,
-													   dz_activity_operation_callback cb,
-													   void* operation_userdata,
-													   const char *renderer_id,
-													   dz_player_volume_percent_t volume);
+                                                       dz_activity_operation_callback cb,
+                                                       void* operation_userdata,
+                                                       const char *renderer_id,
+                                                       dz_player_volume_percent_t volume);
 
 /** @} */ //End of group tag (for documentation purpose)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

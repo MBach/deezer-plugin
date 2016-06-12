@@ -17,6 +17,10 @@
 
 #include "deezer-connect.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @defgroup DeezerCApiOfflineApi Deezer Offline C API
  * @ingroup DeezerCApi
@@ -33,14 +37,14 @@
  * @brief Connect offline states.
  */
 typedef enum {
-	DZ_OFFLINE_SYNC_STATE_UNKNOWN,             /**< Sync state has not been set yet, not a valid value. */
-	DZ_OFFLINE_SYNC_STATE_UNSYNCED,            /**< Resource is not available locally. */
-	DZ_OFFLINE_SYNC_STATE_SYNCED,              /**< Resource and its dependencies are available. */
-	DZ_OFFLINE_SYNC_STATE_SYNCING,             /**< Resource is being synced. */
-	DZ_OFFLINE_SYNC_STATE_ENQUEUED_FOR_SYNC,   /**< Resource will be synced ASAP. */
-	DZ_OFFLINE_SYNC_STATE_UNSYNCING,           /**< Resource is being unsynced. */
-	DZ_OFFLINE_SYNC_STATE_ENQUEUED_FOR_UNSYNC, /**< Resource will be unsynced ASAP. */
-	DZ_OFFLINE_SYNC_STATE_SYNC_ERROR,          /**< There was an error during a sync ---> solution: relaunch sync automatically. */
+    DZ_OFFLINE_SYNC_STATE_UNKNOWN,             /**< Sync state has not been set yet, not a valid value. */
+    DZ_OFFLINE_SYNC_STATE_UNSYNCED,            /**< Resource is not available locally. */
+    DZ_OFFLINE_SYNC_STATE_SYNCED,              /**< Resource and its dependencies are available. */
+    DZ_OFFLINE_SYNC_STATE_SYNCING,             /**< Resource is being synced. */
+    DZ_OFFLINE_SYNC_STATE_ENQUEUED_FOR_SYNC,   /**< Resource will be synced ASAP. */
+    DZ_OFFLINE_SYNC_STATE_UNSYNCING,           /**< Resource is being unsynced. */
+    DZ_OFFLINE_SYNC_STATE_ENQUEUED_FOR_UNSYNC, /**< Resource will be unsynced ASAP. */
+    DZ_OFFLINE_SYNC_STATE_SYNC_ERROR,          /**< There was an error during a sync ---> solution: relaunch sync automatically. */
 } dz_offline_sync_state_t;
 
 /**
@@ -204,9 +208,9 @@ LIBDEEZER_API dz_bigsize_t dz_offline_event_download_progress_complete_size(dz_o
  *
  */
 typedef void (*dz_offline_on_event_cb)(
-	dz_connect_handle handle,
-	dz_offline_event_handle event,
-	void* delegate
+    dz_connect_handle handle,
+    dz_offline_event_handle event,
+    void* delegate
 );
 
 /**
@@ -239,9 +243,9 @@ LIBDEEZER_API dz_error_t dz_offline_eventcb_set(dz_connect_handle self,
  * @param quality            The audio quality
  */
 LIBDEEZER_API dz_error_t dz_offline_set_track_quality(dz_connect_handle self,
-													 dz_activity_operation_callback cb,
-													 void* operation_userdata,
-													 dz_track_quality_t quality);
+                                                     dz_activity_operation_callback cb,
+                                                     void* operation_userdata,
+                                                     dz_track_quality_t quality);
 
 /**
  * @brief Add a resource to offline storage.
@@ -268,11 +272,11 @@ LIBDEEZER_API dz_error_t dz_offline_set_track_quality(dz_connect_handle self,
  * @return DZ_ERROR_NO_ERROR
  */
 LIBDEEZER_API dz_error_t dz_offline_synchronize(dz_connect_handle self,
-													   dz_activity_operation_callback cb,
-													   void* operation_userdata,
-													   const char* sz_path,
-													   const char* sz_version,
-													   const char* sz_json_data);
+                                               dz_activity_operation_callback cb,
+                                               void* operation_userdata,
+                                               const char* sz_path,
+                                               const char* sz_version,
+                                               const char* sz_json_data);
 
 
 /**
@@ -289,9 +293,9 @@ LIBDEEZER_API dz_error_t dz_offline_synchronize(dz_connect_handle self,
  * @return DZ_ERROR_NO_ERROR
  */
 LIBDEEZER_API dz_error_t dz_offline_remove(dz_connect_handle self,
-										   dz_activity_operation_callback cb,
-										   void* operation_userdata,
-										   const char* sz_path);
+                                           dz_activity_operation_callback cb,
+                                           void* operation_userdata,
+                                           const char* sz_path);
 
 /**
  * @brief Get the resource's synchronization state given by the path.
@@ -317,10 +321,10 @@ LIBDEEZER_API dz_error_t dz_offline_remove(dz_connect_handle self,
  * @return DZ_ERROR_NO_ERROR
  */
 LIBDEEZER_API dz_error_t dz_offline_get_state(dz_connect_handle self,
-											  dz_activity_operation_callback cb,
-											  void* operation_userdata,
-											  const char* sz_path,
-											  bool detailed);
+                                              dz_activity_operation_callback cb,
+                                              void* operation_userdata,
+                                              const char* sz_path,
+                                              bool detailed);
 
 /**
  * @brief Get the JSON representation of a sync state.
@@ -355,10 +359,10 @@ LIBDEEZER_API const char* dz_offline_state_to_json(dz_object_handle sync_state);
  * @return DZ_ERROR_NO_ERROR
  */
 LIBDEEZER_API dz_error_t dz_offline_get_state_batch(dz_connect_handle self,
-												   dz_activity_operation_callback cb,
-												   void* operation_userdata,
-												   const char* sz_list_of_tracklist_path,
-												   bool detailed);
+                                                   dz_activity_operation_callback cb,
+                                                   void* operation_userdata,
+                                                   const char* sz_list_of_tracklist_path,
+                                                   bool detailed);
 
 /**
  * @brief Get the JSON representation of a sync state.
@@ -398,5 +402,9 @@ LIBDEEZER_API dz_error_t dz_offline_get(dz_connect_handle self,
 LIBDEEZER_API const char* dz_offline_resource_to_json(dz_object_handle obj);
 
 /** @} */ //End of group tag (for documentation purpose)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

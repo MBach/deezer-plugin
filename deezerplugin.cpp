@@ -285,7 +285,8 @@ void DeezerPlugin::extractAlbumListFromArtist(QNetworkReply *reply, const QStrin
 		if (artistDao) {
 			album->setParentNode(artistDao);
 		}
-		bool ok = db.insertIntoTableAlbums(artistId, album);
+		//bool ok = db.insertIntoTableAlbums(artistId, album);
+		bool ok = false;
 
 		// Finally, extract track list
 		/// XXX: too much requests?

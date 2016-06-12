@@ -57,6 +57,10 @@
 #define LIBDEEZER_API __attribute__((visibility("default")))
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @brief Errors that can be returned by Deezer SDK API.
  */
 typedef enum {
@@ -131,10 +135,6 @@ typedef enum {
 #define DECLARE_CLASS(class_name) \
 struct class_name; \
 typedef struct class_name *class_name##_handle \
-
-#ifdef __cplusplus
-extern "C" {
-#endif
  
 DECLARE_CLASS(dz_object);
 
@@ -160,7 +160,7 @@ LIBDEEZER_API void dz_object_release(dz_object_handle obj);
  * @brief Release object reference macro.
  */
 #define DZ_OBJECT_RELEASE(obj) dz_object_release((dz_object_handle)obj)
-	
+    
 DECLARE_CLASS(dz_activity);
 
 /**
@@ -186,8 +186,8 @@ typedef void (*dz_activity_operation_callback)(
  * @param operation_userdata A reference to the user’s data.
  */
 LIBDEEZER_API dz_error_t dz_activity_app_deactivate(dz_activity_handle self,
-													dz_activity_operation_callback cb,
-													void* operation_userdata);
+                                                    dz_activity_operation_callback cb,
+                                                    void* operation_userdata);
 
 /**
  * @brief Dump some information about bad state of lib.
@@ -207,7 +207,7 @@ typedef uint64_t dz_useconds_t;
 typedef uint64_t dz_nseconds_t;
 
 typedef unsigned long dz_size_t;
-typedef uint32_t	dz_sizekB_t;
+typedef uint32_t    dz_sizekB_t;
 typedef uint64_t    dz_bigsize_t;
 
 #define DZ_BIGSIZE_UNKNOWN ((dz_bigsize_t)-1)

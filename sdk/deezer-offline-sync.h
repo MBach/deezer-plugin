@@ -19,6 +19,10 @@
 #include "deezer-connect.h"
 #include "deezer-offline.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @defgroup DeezerCApiOfflineSyncApi Deezer Offline C synchronous API
  * @ingroup DeezerCApi
@@ -60,9 +64,9 @@ LIBDEEZER_API dz_error_t dz_offline_get_state_sync(dz_connect_handle self,
  * @return DZ_ERROR_NO_ERROR
  */
 LIBDEEZER_API dz_error_t dz_offline_get_state_batch_sync(dz_connect_handle self,
-                                                    const char* sz_list_of_tracklist_path,
-                                                    bool detailed,
-                                                    dz_object_handle* p_result);
+                                                        const char* sz_list_of_tracklist_path,
+                                                        bool detailed,
+                                                        dz_object_handle* p_result);
 /**
  * @brief Synchronous version of dz_offline_get() function.
  *
@@ -80,5 +84,8 @@ LIBDEEZER_API dz_error_t dz_offline_get_sync(dz_connect_handle self,
 
 /** @} */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

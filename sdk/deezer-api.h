@@ -29,10 +29,10 @@ extern "C" {
  * @brief Deezer REST command type.
  */
 typedef enum {
-	DZ_API_CMD_UNKNOWN,/**< API Cmd has not been set yet, not a valid value. */
-	DZ_API_CMD_GET,    /**< REST GET method. */
-	DZ_API_CMD_POST,   /**< REST POST method. */
-	DZ_API_CMD_DELETE  /**< REST DELETE method. */
+    DZ_API_CMD_UNKNOWN,/**< API Cmd has not been set yet, not a valid value. */
+    DZ_API_CMD_GET,    /**< REST GET method. */
+    DZ_API_CMD_POST,   /**< REST POST method. */
+    DZ_API_CMD_DELETE  /**< REST DELETE method. */
 } dz_api_cmd_t;
 
 /**
@@ -82,10 +82,10 @@ typedef void* dz_stream_object;
  * For instance, you could use it to convert JSON strings to dictionaries.
  */
 typedef struct dz_stream_parser_class {
-	dz_stream_tokener (*tokener_new)(void);
-	void              (*tokener_free)(dz_stream_tokener tok);
-	dz_stream_object  (*tokener_parse)(dz_stream_tokener tok, const char*data, size_t len);
-	void			  (*tokener_object_release)(dz_stream_object obj);
+    dz_stream_tokener (*tokener_new)(void);
+    void              (*tokener_free)(dz_stream_tokener tok);
+    dz_stream_object  (*tokener_parse)(dz_stream_tokener tok, const char*data, size_t len);
+    void              (*tokener_object_release)(dz_stream_object obj);
 } *dz_stream_parser_class;
 
 /**
@@ -151,10 +151,10 @@ typedef void (*dz_api_request_done_cb)(dz_api_request_processing_handle handle,
  * @returns        A request processing handle.
  */
 LIBDEEZER_API dz_api_request_processing_handle dz_api_request_processing_async(dz_connect_handle connect,
-        dz_api_request_handle  request,
-        dz_stream_parser_class parser,
-        dz_api_request_done_cb cb,
-        void*                  userdata);
+                                                                                dz_api_request_handle  request,
+                                                                                dz_stream_parser_class parser,
+                                                                                dz_api_request_done_cb cb,
+                                                                                void*                  userdata);
 
 /**
  * @brief Cancel an async request processing.
