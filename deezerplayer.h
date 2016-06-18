@@ -6,6 +6,12 @@
 #include <QUrl>
 #include "imediaplayer.h"
 
+#include "sdk/deezer-connect.h"
+#include "sdk/deezer-player.h"
+
+// Sample access token corresponding to a free user account, to be replaced by yours.
+#define USER_ACCESS_TOKEN "fr49mph7tV4KY3ukISkFHQysRpdCEbzb958dB320pM15OpFsQs"
+
 class DeezerPlugin;
 
 class DeezezPlayer : public IMediaPlayer
@@ -18,6 +24,13 @@ private:
 
 	qint64 _pos;
 	qint64 _time;
+
+	dz_connect_configuration _config;
+	dz_connect_handle _dzconnect;
+	static int _activationCount;
+	static int _nbTrackPlayed;
+	static int _nbTrackToPlay;
+	static dz_player_handle _dzplayer;
 
 public:
 	explicit DeezezPlayer(DeezerPlugin *parent);
@@ -42,6 +55,19 @@ public:
 
 	/** The current volume of this remote player. */
 	virtual qreal volume() const override;
+
+private:
+	void initSDK();
+
+	static void appConnectOneventCb(dz_connect_handle handle, dz_connect_event_handle event, void* delegate);
+
+	static void appPlayerOneventCb(dz_player_handle handle, dz_player_event_handle event, void *supervisor);
+
+	static void appLaunchPlay();
+
+	static void appShutdown();
+
+	static void dzPlayerOnDeactivate(void* delegate, void* operation_userdata, dz_error_t status, dz_object_handle result);
 
 public slots:
 	virtual void pause() override;

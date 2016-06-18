@@ -35,13 +35,10 @@ INSTALLS += target
 
 HEADERS += interfaces/basicplugin.h \
     interfaces/remotemediaplayerplugin.h \
-    model/albumdao.h \
-    model/artistdao.h \
     model/genericdao.h \
     model/playlistdao.h \
     model/sqldatabase.h \
     model/trackdao.h \
-    model/yeardao.h \
     abstractsearchdialog.h \
     deezerplugin.h \
     filehelper.h \

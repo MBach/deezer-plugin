@@ -2,12 +2,9 @@
 #define SQLDATABASE_H
 
 #include "../miamcore_global.h"
-#include "artistdao.h"
-#include "albumdao.h"
 #include "settings.h"
 #include "trackdao.h"
 #include "playlistdao.h"
-#include "yeardao.h"
 
 #include <QFileInfo>
 #include <QSqlDatabase>
@@ -31,11 +28,11 @@ private:
 	QHash<uint, GenericDAO*> _cache;
 
 public:
-	explicit SqlDatabase();
+	explicit SqlDatabase(QObject *parent = nullptr);
 
 	~SqlDatabase();
 
-	void init();
+	void reset();
 
 	uint insertIntoTablePlaylists(const PlaylistDAO &playlist, const std::list<TrackDAO> &tracks, bool isOverwriting);
 	bool insertIntoTablePlaylistTracks(uint playlistId, const std::list<TrackDAO> &tracks, bool isOverwriting = false);
@@ -51,7 +48,6 @@ public:
 	PlaylistDAO selectPlaylist(uint playlistId);
 	QList<PlaylistDAO> selectPlaylists();
 
-	ArtistDAO* selectArtist(uint artistId);
 	TrackDAO selectTrackByURI(const QString &uri);
 
 	bool playlistHasBackgroundImage(uint playlistID);
@@ -64,12 +60,14 @@ public:
 
 	QString normalizeField(const QString &s) const;
 
+private:
+	void init();
+
 	void setPragmas();
 
-public slots:
-	/** Delete cache and rescan local tracks. */
-	void rebuild();
+	void updateTrack(const QString &absFilePath);
 
+public slots:
 	/** Reads an external picture which is close to multimedia files (same folder). */
 	void saveCoverRef(const QString &coverPath, const QString &track);
 
@@ -77,14 +75,7 @@ public slots:
 	void saveFileRef(const QString &absFilePath);
 
 signals:
-	void aboutToResyncRemoteSources();
-	void coverWasUpdated(const QFileInfo &);
-
-	void nodeExtracted(GenericDAO *node);
-	void aboutToUpdateNode(GenericDAO *node);
-
-	void aboutToUpdateView(const QList<QUrl> &oldTracks, const QList<QUrl> &newTracks);
-	void aboutToCleanView();
+	void aboutToUpdateView();
 };
 
 #endif // SQLDATABASE_H
