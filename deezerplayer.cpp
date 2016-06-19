@@ -10,6 +10,7 @@ int DeezezPlayer::_activationCount = 0;
 int DeezezPlayer::_nbTrackToPlay = 1;
 int DeezezPlayer::_nbTrackPlayed = 0;
 dz_player_handle DeezezPlayer::_dzplayer = NULL;
+dz_connect_handle DeezezPlayer::_dzconnect = NULL;
 
 DeezezPlayer::DeezezPlayer(DeezerPlugin *parent)
 	: IMediaPlayer(parent)
@@ -18,7 +19,106 @@ DeezezPlayer::DeezezPlayer(DeezerPlugin *parent)
 	, _pos(0)
 	, _time(0)
 {
-	this->initSDK();
+
+}
+
+void DeezezPlayer::init()
+{
+	dz_error_t dzerr = DZ_ERROR_NO_ERROR;
+
+	qDebug() << "<-- Deezer native SDK Version: " << dz_connect_get_build_id();
+
+	memset(&_config, 0, sizeof(struct dz_connect_configuration));
+
+	_config.app_id            = "141475";
+	_config.product_id        = "MiamPlayer";
+	_config.product_build_id  = "0.8.1";
+	QString cacheLocation = QStandardPaths::standardLocations(QStandardPaths::CacheLocation).first();
+	cacheLocation = cacheLocation.left(cacheLocation.length() - 1);
+	_config.user_profile_path = cacheLocation.toStdString().data();
+	_config.connect_event_cb  = appConnectOnEventCb;
+
+	qDebug() << "--> Application ID:" << _config.app_id;
+	qDebug() << "--> Product ID:", _config.product_id;
+	qDebug() << "--> Product BUILD ID:" << _config.product_build_id;
+	qDebug() << "--> User Profile Path:" << _config.user_profile_path;
+
+	_dzconnect = dz_connect_new(&_config);
+	if (_dzconnect == NULL) {
+		qDebug() << "dzconnect null";
+		return;
+	}
+
+	qDebug() << "Device ID: " << dz_connect_get_device_id(_dzconnect);
+
+	dzerr = dz_connect_debug_log_disable(_dzconnect);
+	if (dzerr != DZ_ERROR_NO_ERROR) {
+		qDebug() << "dz_connect_debug_log_disable error";
+		return;
+	}
+
+	dzerr = dz_connect_activate(_dzconnect, NULL);
+	if (dzerr != DZ_ERROR_NO_ERROR) {
+		qDebug() << "dz_connect_activate error";
+		return;
+	}
+	_activationCount++;
+
+	/* Calling dz_connect_cache_path_set()
+	 * is mandatory in order to have the attended behavior */
+	dz_connect_cache_path_set(_dzconnect, NULL, NULL, cacheLocation.toStdString().data());
+
+	_dzplayer = dz_player_new(_dzconnect);
+	if (_dzplayer == NULL) {
+		qDebug() << "dzplayer null";
+		return;
+	}
+
+	dzerr = dz_player_activate(_dzplayer, NULL);
+	if (dzerr != DZ_ERROR_NO_ERROR) {
+		qDebug() << "dz_player_activate error";
+		return;
+	}
+	_activationCount++;
+
+	dzerr = dz_player_set_event_cb(_dzplayer, appPlayerOnEventCb);
+	if (dzerr != DZ_ERROR_NO_ERROR) {
+		qDebug() << "dz_player_set_event_cb error";
+		return;
+	}
+
+	dzerr = dz_connect_set_access_token(_dzconnect,NULL, NULL, USER_ACCESS_TOKEN);
+	if (dzerr != DZ_ERROR_NO_ERROR) {
+		qDebug() << "dz_connect_set_access_token error";
+		return;
+	}
+
+	/* Calling dz_connect_offline_mode(FALSE) is mandatory to force the login */
+	dzerr = dz_connect_offline_mode(_dzconnect, NULL, NULL, false);
+	if (dzerr != DZ_ERROR_NO_ERROR) {
+		qDebug() << "dz_connect_offline_mode error";
+		return;
+	}
+
+	/*while (1) {
+		qDebug() << "- - - - wait until end of actions (c=" << _activationCount << ")";
+		QThread::sleep(1);
+		// Exited normally
+		if (_activationCount == 0) {
+			break;
+		}
+	}
+
+	if (_dzconnect) {
+		dz_object_release((dz_object_handle)_dzconnect);
+		_dzconnect = NULL;
+	}
+	if (_dzplayer) {
+		dz_object_release((dz_object_handle)_dzplayer);
+		_dzplayer = NULL;
+	}
+
+	qDebug() << "-- shutdowned --";*/
 }
 
 /** Current media length in ms. */
@@ -64,105 +164,7 @@ qreal DeezezPlayer::volume() const
 	return vol;
 }
 
-void DeezezPlayer::initSDK()
-{
-	dz_error_t dzerr = DZ_ERROR_NO_ERROR;
-
-	qDebug() << "<-- Deezer native SDK Version: " << dz_connect_get_build_id();
-
-	memset(&_config, 0, sizeof(struct dz_connect_configuration));
-
-	_config.app_id            = "141475";
-	_config.product_id        = "MiamPlayer";
-	_config.product_build_id  = "0.8.1";
-	QString cacheLocation = QStandardPaths::standardLocations(QStandardPaths::CacheLocation).first();
-	_config.user_profile_path = cacheLocation.toStdString().data();
-	_config.connect_event_cb  = appConnectOneventCb;
-
-	qDebug() << "--> Application ID:" << _config.app_id;
-	qDebug() << "--> Product ID:", _config.product_id;
-	qDebug() << "--> Product BUILD ID:" << _config.product_build_id;
-	qDebug() << "--> User Profile Path:" << _config.user_profile_path;
-
-	_dzconnect = dz_connect_new(&_config);
-	if (_dzconnect == NULL) {
-		qDebug() << "dzconnect null";
-		return;
-	}
-
-	qDebug() << "Device ID: " << dz_connect_get_device_id(_dzconnect);
-
-	dzerr = dz_connect_debug_log_disable(_dzconnect);
-	if (dzerr != DZ_ERROR_NO_ERROR) {
-		qDebug() << "dz_connect_debug_log_disable error";
-		return;
-	}
-
-	dzerr = dz_connect_activate(_dzconnect, NULL);
-	if (dzerr != DZ_ERROR_NO_ERROR) {
-		qDebug() << "dz_connect_activate error";
-		return;
-	}
-	_activationCount++;
-
-	/* Calling dz_connect_cache_path_set()
-	 * is mandatory in order to have the attended behavior */
-	dz_connect_cache_path_set(_dzconnect, NULL, NULL, cacheLocation.toStdString().data());
-
-	_dzplayer = dz_player_new(_dzconnect);
-	if (_dzplayer == NULL) {
-		qDebug() << "dzplayer null";
-		return;
-	}
-
-	dzerr = dz_player_activate(_dzplayer, NULL);
-	if (dzerr != DZ_ERROR_NO_ERROR) {
-		qDebug() << "dz_player_activate error";
-		return;
-	}
-	_activationCount++;
-
-	dzerr = dz_player_set_event_cb(_dzplayer, appPlayerOneventCb);
-	if (dzerr != DZ_ERROR_NO_ERROR) {
-		qDebug() << "dz_player_set_event_cb error";
-		return;
-	}
-
-	dzerr = dz_connect_set_access_token(_dzconnect,NULL, NULL, USER_ACCESS_TOKEN);
-	if (dzerr != DZ_ERROR_NO_ERROR) {
-		qDebug() << "dz_connect_set_access_token error";
-		return;
-	}
-
-	/* Calling dz_connect_offline_mode(FALSE) is mandatory to force the login */
-	dzerr = dz_connect_offline_mode(_dzconnect, NULL, NULL, false);
-	if (dzerr != DZ_ERROR_NO_ERROR) {
-		qDebug() << "dz_connect_offline_mode error";
-		return;
-	}
-
-	while (1) {
-		//qDebug() << "- - - - wait until end of actions (c=%d)\n",activation_count);
-		QThread::sleep(1);
-		// Exited normally
-		if (_activationCount == 0) {
-			break;
-		}
-	}
-
-	if (_dzconnect) {
-		dz_object_release((dz_object_handle)_dzconnect);
-		_dzconnect = NULL;
-	}
-	if (_dzplayer) {
-		dz_object_release((dz_object_handle)_dzplayer);
-		_dzplayer = NULL;
-	}
-
-	qDebug() << "-- shutdowned --";
-}
-
-void DeezezPlayer::appConnectOneventCb(dz_connect_handle handle, dz_connect_event_handle event, void *delegate)
+void DeezezPlayer::appConnectOnEventCb(dz_connect_handle handle, dz_connect_event_handle event, void *delegate)
 {
 	dz_connect_event_t type = dz_connect_event_get_type(event);
 	switch (type) {
@@ -184,7 +186,7 @@ void DeezezPlayer::appConnectOneventCb(dz_connect_handle handle, dz_connect_even
 
 	case DZ_CONNECT_EVENT_USER_LOGIN_OK:
 		qDebug() << "++++ CONNECT_EVENT ++++ USER_LOGIN_OK";
-		appLaunchPlay();
+		//appLaunchPlay();
 		break;
 
 	case DZ_CONNECT_EVENT_USER_NEW_OPTIONS:
@@ -222,7 +224,7 @@ void DeezezPlayer::appConnectOneventCb(dz_connect_handle handle, dz_connect_even
 	}
 }
 
-void DeezezPlayer::appPlayerOneventCb(dz_player_handle handle, dz_player_event_handle event, void *supervisor)
+void DeezezPlayer::appPlayerOnEventCb(dz_player_handle handle, dz_player_event_handle event, void *supervisor)
 {
 	dz_streaming_mode_t  streaming_mode;
 	dz_index_in_playlist idx;
@@ -262,28 +264,28 @@ void DeezezPlayer::appPlayerOneventCb(dz_player_handle handle, dz_player_event_h
 		break;
 
 	case DZ_PLAYER_EVENT_PLAYLIST_TRACK_SELECTED:
-		{
-			bool is_preview;
-			bool can_pause_unpause;
-			bool can_seek;
-			int  nb_skip_allowed;
-			const char *selected_dzapiinfo;
-			const char *next_dzapiinfo;
+	{
+		bool is_preview;
+		bool can_pause_unpause;
+		bool can_seek;
+		int  nb_skip_allowed;
+		const char *selected_dzapiinfo;
+		const char *next_dzapiinfo;
 
-			is_preview = dz_player_event_track_selected_is_preview(event);
+		is_preview = dz_player_event_track_selected_is_preview(event);
 
-			dz_player_event_track_selected_rights(event, &can_pause_unpause, &can_seek, &nb_skip_allowed);
+		dz_player_event_track_selected_rights(event, &can_pause_unpause, &can_seek, &nb_skip_allowed);
 
-			selected_dzapiinfo = dz_player_event_track_selected_dzapiinfo(event);
-			next_dzapiinfo = dz_player_event_track_selected_next_track_dzapiinfo(event);
+		selected_dzapiinfo = dz_player_event_track_selected_dzapiinfo(event);
+		next_dzapiinfo = dz_player_event_track_selected_next_track_dzapiinfo(event);
 
-			qDebug() << "==== PLAYER_EVENT ==== PLAYLIST_TRACK_SELECTED for idx: " << idx << "- is_preview:" << is_preview;
-			qDebug() << "can_pause_unpause: " << can_pause_unpause << "can_seek: " << can_seek << "nb_skip_allowed:" << nb_skip_allowed;
-			if (selected_dzapiinfo)
+		qDebug() << "==== PLAYER_EVENT ==== PLAYLIST_TRACK_SELECTED for idx: " << idx << "- is_preview:" << is_preview;
+		qDebug() << "can_pause_unpause: " << can_pause_unpause << "can_seek: " << can_seek << "nb_skip_allowed:" << nb_skip_allowed;
+		if (selected_dzapiinfo)
 			qDebug() << "now:" << selected_dzapiinfo;
-			if (next_dzapiinfo)
+		if (next_dzapiinfo)
 			qDebug() << "next:" << next_dzapiinfo;
-		 }
+	}
 		_nbTrackPlayed++;
 		break;
 
@@ -307,7 +309,7 @@ void DeezezPlayer::appPlayerOneventCb(dz_player_handle handle, dz_player_event_h
 		qDebug() << "==== PLAYER_EVENT ==== RENDER_TRACK_END for idx:" << idx;
 		qDebug() << "nb_track_to_play:" << _nbTrackToPlay << "nb_track_played :" << _nbTrackPlayed;
 		if (_nbTrackToPlay != -1 &&  // unlimited
-			_nbTrackToPlay == _nbTrackPlayed) {
+				_nbTrackToPlay == _nbTrackPlayed) {
 			appShutdown();
 		} else {
 			appLaunchPlay();
@@ -351,16 +353,16 @@ void DeezezPlayer::appLaunchPlay() {
 void DeezezPlayer::appShutdown() {
 	qDebug() << "SHUTDOWN (1/2) - dzplayer = " << _dzplayer;
 	if (_dzplayer) {
-		dz_player_deactivate(_dzplayer, dzPlayerOnDeactivate, NULL);
+		dz_player_deactivate(_dzplayer, deactivate, NULL);
 	}
 
 	//qDebug() << "SHUTDOWN (2/2) - dzconnect = " << _dzconnect;
-	/*if (_dzconnect != NULL) {
-		dz_connect_deactivate(_dzconnect, dz_connect_on_deactivate, NULL);
-	}*/
+	if (_dzconnect != NULL) {
+		dz_connect_deactivate(_dzconnect, deactivate, NULL);
+	}
 }
 
-void DeezezPlayer::dzPlayerOnDeactivate(void* delegate, void* operation_userdata, dz_error_t status, dz_object_handle result)
+void DeezezPlayer::deactivate(void* delegate, void* operation_userdata, dz_error_t status, dz_object_handle result)
 {
 	_activationCount--;
 	qDebug() << "PLAYER deactivated - c = " << _activationCount << " with status = " << status;
@@ -368,7 +370,7 @@ void DeezezPlayer::dzPlayerOnDeactivate(void* delegate, void* operation_userdata
 
 void DeezezPlayer::pause()
 {
-	//_webView->page()->runJavaScript("DZ.player.pause();");
+	dz_player_pause(_dzplayer, NULL, NULL);
 }
 
 void DeezezPlayer::play(const QUrl &track)

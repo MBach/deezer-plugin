@@ -128,6 +128,11 @@ QWidget* DeezerPlugin::configPage()
 	return widget;
 }
 
+void DeezerPlugin::init()
+{
+	_webPlayer->init();
+}
+
 /** Redefined. */
 void DeezerPlugin::setSearchDialog(AbstractSearchDialog *w)
 {

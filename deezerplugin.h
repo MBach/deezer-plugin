@@ -61,6 +61,8 @@ public:
 	/** Load and return user interface to manipulate this plugin. */
 	virtual QWidget* configPage() override;
 
+	virtual void init() override;
+
 	/** This plugin can be configurable in options. */
 	inline virtual bool isConfigurable() const override { return true; }
 
